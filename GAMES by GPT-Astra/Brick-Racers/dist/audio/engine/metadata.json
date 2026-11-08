@@ -1,0 +1,14 @@
+{
+  "source": "engine-loop-1.wav",
+  "sourceSampleRate": 96000,
+  "sourceBitDepth": 24,
+  "sampleRate": 48000,
+  "bitDepth": 24,
+  "channels": 2,
+  "duration": 3.96,
+  "peak": 0.75,
+  "rms": 0.2194669633771924,
+  "seamStep": 0.027852587401866913,
+  "crossfadeMs": 40,
+  "sha256": "c83a30746bbc1eeeb8356ba0a8e2efb137bdc1e37fab94a9f9ce96c9ef25b47f"
+}

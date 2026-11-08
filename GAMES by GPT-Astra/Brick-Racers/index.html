@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <meta name="theme-color" content="#101c26" />
+    <title>BRICK RACERS — Built for the thrill</title>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <canvas id="game" aria-label="3D brick racing game"></canvas>
+    <div class="vignette"></div>
+    <header id="header">
+      <a class="brand" href="#" aria-label="Brick Racers home"
+        ><span class="brand-brick"><i></i><i></i></span
+        ><span
+          >BRICK<span class="brand-light">RACERS</span
+          ><small>BUILT FOR THE THRILL</small></span
+        ></a
+      >
+      <nav>
+        <button class="nav-button active" data-page="play">PLAY</button
+        ><button class="nav-button" data-page="garage">GARAGE</button
+        ><button class="nav-button" data-page="guide">HOW TO PLAY</button>
+      </nav>
+      <div class="header-actions">
+        <span class="local-badge"><i></i> LOCAL PLAY</span
+        ><button
+          id="sound-btn"
+          class="icon-btn"
+          title="Toggle sound"
+          aria-label="Toggle sound"
+        >
+          ♫</button
+        ><button
+          id="settings-btn"
+          class="icon-btn"
+          title="Settings"
+          aria-label="Settings"
+        >
+          ⚙
+        </button>
+      </div>
+    </header>
+    <main id="menu">
+      <section id="play-page" class="page">
+        <div class="hero">
+          <div class="eyebrow"><span></span> THE STARTING LINE IS YOURS</div>
+          <h1>SMALL BRICKS.<br />BIG <em>RIVALRIES.</em></h1>
+          <p>
+            Build your legend. Break away from the pack.<br />A classic racing
+            spirit, reimagined in 3D.
+          </p>
+          <div class="race-meta">
+            <span><b>6</b> RACERS</span><span><b>3</b> LAPS</span
+            ><span><b>∞</b> POSSIBILITIES</span>
+          </div>
+          <button id="start-btn" class="primary">
+            LET’S RACE <span>↗</span>
+          </button>
+          <div class="start-hint"><kbd>ENTER</kbd> TO HIT THE GRID</div>
+        </div>
+        <div class="track-panel">
+          <div class="panel-kicker">
+            <span
+              ><button id="all-circuits">06 CIRCUITS / VIEW ALL ↗</button></span
+            ><span class="live-dot">● LIVE PREVIEW</span>
+          </div>
+          <div class="track-info">
+            <div>
+              <span id="track-type" class="eyebrow">THE PIRATE CUP</span>
+              <h2 id="track-name">Buccaneer Bay</h2>
+              <p id="track-desc">Salt in the air. Rivals in your rearview.</p>
+            </div>
+            <div class="track-stamp">
+              ↝<small id="track-length">1.2 KM</small>
+            </div>
+          </div>
+          <div class="track-bottom">
+            <div class="track-tags">
+              <span id="track-difficulty">● ● ○ &nbsp; INTERMEDIATE</span
+              ><span id="track-surface">CLASSIC TARMAC</span
+              ><span id="track-weather">☀ &nbsp; CLEAR SKIES</span>
+            </div>
+            <div class="track-controls">
+              <button id="prev-track" aria-label="Previous circuit">←</button
+              ><span id="track-count">01 <b>/ 03</b></span
+              ><button id="next-track" aria-label="Next circuit">→</button>
+            </div>
+          </div>
+        </div>
+        <div class="menu-bottom">
+          <span>AN ORIGINAL BRICK-BUILT RACING ADVENTURE</span
+          ><span>GOOD TIMES. GREAT RACES. <b>LET’S GO. ↗</b></span>
+        </div>
+      </section>
+      <section id="garage-page" class="page hidden">
+        <div class="hero garage-hero">
+          <div class="eyebrow"><span></span> YOUR RIDE. YOUR RULES.</div>
+          <h1>BUILT TO<br /><em>STAND OUT.</em></h1>
+          <p>
+            Make it yours. Every great rivalry<br />starts with a great ride.
+          </p>
+          <h3>BODY COLOR</h3>
+          <div id="paint-options" class="swatches"></div>
+          <h3>CHASSIS</h3>
+          <div class="choices">
+            <button data-chassis="balanced" class="selected">ALL-ROUNDER</button
+            ><button data-chassis="speed">SPEEDSTER</button
+            ><button data-chassis="grip">DRIFT KING</button>
+          </div>
+          <div class="stat"><span>TOP SPEED</span><i id="stat-speed"></i></div>
+          <div class="stat"><span>HANDLING</span><i id="stat-grip"></i></div>
+          <div class="stat">
+            <span>ACCELERATION</span><i id="stat-accel"></i>
+          </div>
+          <button id="garage-done" class="primary">
+            BACK TO THE GRID <span>↗</span>
+          </button>
+        </div>
+        <div class="garage-caption">
+          <span>YOUR CUSTOM BUILD</span>
+          <h2 id="car-name">THE RED COMET</h2>
+          <p>128 bricks. One ambition.</p>
+        </div>
+      </section>
+      <section id="guide-page" class="page hidden">
+        <div class="guide-box">
+          <div class="eyebrow">A LITTLE KNOW-HOW. A LOT OF GO.</div>
+          <h1>OWN THE <em>TRACK.</em></h1>
+          <div class="guide-grid">
+            <article>
+              <span class="guide-num">01</span>
+              <h3>Find your line</h3>
+              <p>
+                <kbd>W</kbd> / <kbd>↑</kbd> Accelerate<br /><kbd>S</kbd> /
+                <kbd>↓</kbd> Brake / reverse<br /><kbd>A</kbd> <kbd>D</kbd> /
+                <kbd>←</kbd> <kbd>→</kbd> Steer
+              </p>
+            </article>
+            <article>
+              <span class="guide-num">02</span>
+              <h3>Slide. Charge. Fly.</h3>
+              <p>
+                Hold <kbd>SHIFT</kbd> while steering to drift. Charge blue, then
+                gold sparks. Release for a turbo boost.
+              </p>
+            </article>
+            <article>
+              <span class="guide-num">03</span>
+              <h3>Play your bricks</h3>
+              <p>
+                Collect colored bricks. Matching pickups stack to level 3. Press
+                <kbd>SPACE</kbd> to fire your power-up.
+              </p>
+            </article>
+          </div>
+          <div class="power-guide">
+            <span>🟩 <b>TURBO</b> A burst of speed</span
+            ><span>🟥 <b>ROCKET</b> Chase a rival</span
+            ><span>🟦 <b>SHIELD</b> Block attacks</span
+            ><span>🟨 <b>OIL</b> Leave a surprise</span>
+          </div>
+          <p class="guide-extra">
+            <kbd>ESC</kbd> Pause &nbsp; <kbd>R</kbd> Reset to track &nbsp;
+            <kbd>F</kbd> Fullscreen &nbsp; <kbd>M</kbd> Sound
+          </p>
+          <button id="guide-done" class="primary">
+            GOT IT. LET’S GO. <span>↗</span>
+          </button>
+        </div>
+      </section>
+    </main>
+    <section id="hud" class="hidden">
+      <div class="hud-top">
+        <div class="position-box">
+          <span id="position">6</span><small>/ 6<em>POSITION</em></small>
+        </div>
+        <div class="lap-box">
+          <span>LAP</span><b id="lap">1 <small>/ 3</small></b>
+        </div>
+        <div class="time-box">
+          <span>RACE TIME</span><b id="time">00:00.00</b
+          ><small id="best-lap">BEST —</small>
+        </div>
+        <button
+          id="pause-btn"
+          class="icon-btn"
+          title="Pause"
+          aria-label="Pause"
+        >
+          Ⅱ
+        </button>
+      </div>
+      <div id="leaderboard"></div>
+      <div class="race-location">
+        <span id="race-cup">THE PIRATE CUP</span
+        ><b id="race-track">BUCCANEER BAY</b>
+      </div>
+      <div id="minimap">
+        <svg viewBox="0 0 240 170">
+          <path id="map-shadow" />
+          <path id="map-path" />
+          <g id="map-dots"></g></svg
+        ><span>CIRCUIT MAP</span>
+      </div>
+      <div id="powerup" class="empty">
+        <div id="power-icon">＋</div>
+        <div>
+          <span id="power-name">PICK UP A BRICK</span
+          ><small id="power-level">POWER YOUR NEXT MOVE</small>
+        </div>
+        <kbd>SPACE</kbd>
+      </div>
+      <div class="speedometer">
+        <div><strong id="speed">000</strong><span>KM/H</span></div>
+        <div class="speed-track"><i id="speed-bar"></i></div>
+        <small id="drive-state">READY TO ROLL</small>
+      </div>
+      <div id="drift-meter" class="hidden">
+        <span>DRIFT CHARGE</span>
+        <div><i></i></div>
+      </div>
+    </section>
+    <div id="countdown" class="hidden"></div>
+    <div id="toast" role="status"></div>
+    <div id="modal" class="hidden">
+      <div class="modal-card" id="modal-content"></div>
+    </div>
+    <div id="touch-controls">
+      <div>
+        <button data-key="ArrowLeft">←</button
+        ><button data-key="ArrowRight">→</button>
+      </div>
+      <div>
+        <button data-key="ShiftLeft">DRIFT</button
+        ><button data-key="Space">FIRE</button
+        ><button data-key="ArrowDown">BRAKE</button
+        ><button data-key="ArrowUp">GO</button>
+      </div>
+    </div>
+    <div id="loading">
+      <span class="brand-brick"><i></i><i></i></span>
+      <h2>BUILDING THE GOOD TIMES</h2>
+      <p>Snapping your world together…</p>
+    </div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>

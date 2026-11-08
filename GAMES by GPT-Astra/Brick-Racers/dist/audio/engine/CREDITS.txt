@@ -1,0 +1,14 @@
+Car Engine Loop 96kHz, 4s
+Author: qubodup / Iwan Gabovitch
+Source: https://opengameart.org/content/car-engine-loop-96khz-4s
+Licensed here under Creative Commons Attribution 3.0 Unported (CC BY 3.0).
+License: https://creativecommons.org/licenses/by/3.0/
+
+Original recording: engine-loop-1.wav, 96 kHz, 24-bit stereo.
+Brick Racers adaptation: DC removal, high-pass/low-pass filtering, 40 ms
+loop crossfade, gain normalization, conversion to 48 kHz/24-bit PCM WAV.
+Playback adds variable pitch, throttle-controlled filtering, gain envelopes,
+and stereo positioning for rival engines. No endorsement is implied.
+
+Preparation script: scripts/prepare-engine.py
+Original download: https://opengameart.org/sites/default/files/engine-loop.7z

@@ -1,0 +1,24 @@
+BRICK RACERS — FULL GAME BACKUP
+
+Extract this ZIP before playing.
+
+PLAY THE INCLUDED BUILD (no npm install needed):
+With Python 3 installed, open a terminal in the extracted Brick-Racers folder:
+  python3 -m http.server 8080 --directory dist
+Then open http://localhost:8080 in a modern browser.
+Keep the terminal open while playing. Press Ctrl+C to stop the server.
+Do not double-click dist/index.html: the game needs an HTTP server.
+
+EDIT OR REBUILD (requires Node.js and npm):
+  npm ci
+  npm run dev
+Open the URL printed in the terminal.
+  npm run build
+recreates the dist folder.
+
+Includes all six stages, source code, bundled playable build, original engine
+recording, prepared WAV, attribution, dependency lockfile, and test scripts.
+Dependencies can be restored with npm ci; node_modules and generated test
+screenshots are omitted. The playable dist build has its assets bundled locally.
+Browser-saved preferences and personal records are not part of this backup.
+See README.md for controls and public/audio/engine/CREDITS.txt for sound credits.

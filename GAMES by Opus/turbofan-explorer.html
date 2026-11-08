@@ -1,0 +1,2411 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<title>AEROS TF-9 · Interactive Turbofan Explorer</title>
+<!--
+  AEROS TF-9 — Interactive High-Bypass Turbofan Explorer
+  Single-file Three.js product viewer. All geometry, textures and audio are procedural.
+  Libraries (pinned): three@0.170.0, three-mesh-bvh@0.8.3, lil-gui@0.20.0 (debug only, lazy).
+-->
+<style>
+:root{
+  --ink:#141820; --ink2:#465061; --ink3:#8790a0; --glass:rgba(255,255,255,.80);
+  --line:rgba(18,28,45,.09); --accent:#4b5cff; --accent2:#8a4bff; --accentSoft:rgba(75,92,255,.12);
+  --hot:#ff6a3d; --cold:#2f8cff; --r:16px;
+  --shadow:0 12px 32px rgba(22,32,52,.13), 0 2px 6px rgba(22,32,52,.06);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#dfe4ea;color:var(--ink);-webkit-font-smoothing:antialiased;user-select:none;-webkit-user-select:none}
+#c{position:fixed;inset:0;width:100%;height:100%;display:block;outline:none;touch-action:none}
+button{font:inherit;color:inherit;cursor:pointer;border:none;background:none}
+.glass{background:var(--glass);backdrop-filter:blur(18px) saturate(1.5);-webkit-backdrop-filter:blur(18px) saturate(1.5);border:1px solid rgba(255,255,255,.75);box-shadow:var(--shadow);border-radius:var(--r)}
+.hidden{opacity:0;pointer-events:none!important;transform:translateY(8px) scale(.98)}
+.ui{transition:opacity .35s ease, transform .45s cubic-bezier(.2,.8,.2,1)}
+body.noui .ui{opacity:0!important;pointer-events:none!important}
+
+/* ---------- brand ---------- */
+#brand{position:fixed;left:16px;top:16px;display:flex;align-items:center;gap:12px;padding:9px 16px 9px 10px;z-index:5}
+#brand .logo{width:38px;height:38px;border-radius:11px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;box-shadow:0 6px 14px rgba(75,92,255,.35)}
+#brand .t1{font-weight:750;letter-spacing:.02em;font-size:15px}
+#brand .t2{font-size:12px;color:var(--ink2);margin-top:1px}
+
+/* ---------- top right ---------- */
+#topRight{position:fixed;right:16px;top:16px;display:flex;gap:8px;z-index:5}
+.iconBtn{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;transition:background .2s, transform .15s, color .2s;position:relative}
+.iconBtn:hover{background:rgba(255,255,255,.95)}
+.iconBtn:active{transform:scale(.94)}
+.iconBtn.on{background:var(--accent);color:#fff;box-shadow:0 6px 16px rgba(75,92,255,.35)}
+.iconBtn svg{width:21px;height:21px;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+[data-tip]:hover::after{content:attr(data-tip);position:absolute;white-space:nowrap;background:#141820;color:#fff;font-size:12px;padding:6px 9px;border-radius:8px;pointer-events:none;z-index:50}
+#topRight [data-tip]:hover::after{top:50px;right:0}
+#toolbar [data-tip]:hover::after{left:54px;top:50%;transform:translateY(-50%)}
+
+/* ---------- left toolbar ---------- */
+#toolbar{position:fixed;left:16px;top:50%;transform:translateY(-50%);display:flex;flex-direction:column;gap:4px;padding:6px;z-index:5}
+#toolbar.hidden{transform:translateY(-50%) translateX(-8px)}
+#toolbar .sep{height:1px;background:var(--line);margin:3px 6px}
+
+/* ---------- explode ---------- */
+#explodeBox{position:fixed;left:16px;bottom:18px;padding:12px 16px;width:250px;z-index:5}
+.rowLbl{display:flex;justify-content:space-between;font-size:12px;font-weight:650;color:var(--ink2);letter-spacing:.04em;text-transform:uppercase}
+.rowLbl b{color:var(--accent);font-variant-numeric:tabular-nums}
+input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;margin:6px 0 0}
+input[type=range]::-webkit-slider-runnable-track{height:5px;border-radius:5px;background:linear-gradient(90deg,var(--accent) var(--p,0%),rgba(20,30,50,.13) var(--p,0%))}
+input[type=range]::-moz-range-track{height:5px;border-radius:5px;background:rgba(20,30,50,.13)}
+input[type=range]::-moz-range-progress{height:5px;border-radius:5px;background:var(--accent)}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:#fff;border:2px solid var(--accent);margin-top:-6.5px;box-shadow:0 2px 6px rgba(20,30,60,.25)}
+input[type=range]::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:#fff;border:2px solid var(--accent)}
+
+/* ---------- story ---------- */
+#story{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);width:min(700px,calc(100vw - 600px));min-width:420px;padding:16px 20px 14px;z-index:6}
+#story.hidden{transform:translateX(-50%) translateY(10px)}
+.storyHead{display:flex;align-items:center;gap:10px;font-size:12px;font-weight:650;color:var(--ink3);letter-spacing:.06em;text-transform:uppercase}
+.chip{display:inline-flex;align-items:center;padding:3px 9px;border-radius:999px;background:var(--accentSoft);color:var(--accent);font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase}
+#stepTitle{margin:7px 0 4px;font-size:20px;letter-spacing:-.01em;font-weight:760}
+#stepText{margin:0;color:var(--ink2);font-size:14px;line-height:1.5;min-height:42px}
+.storyNav{display:flex;align-items:center;gap:10px;margin-top:12px}
+#stepDots{flex:1;display:flex;gap:4px}
+#stepDots button{flex:1;height:6px;border-radius:4px;background:rgba(20,30,50,.12);transition:background .3s;padding:0;position:relative}
+#stepDots button::before{content:"";position:absolute;inset:-8px 0}
+#stepDots button.done{background:rgba(75,92,255,.45)}
+#stepDots button.cur{background:var(--accent)}
+.navBtn{height:36px;min-width:36px;padding:0 12px;border-radius:10px;background:rgba(20,30,50,.06);font-weight:650;font-size:13px;display:inline-flex;align-items:center;gap:6px;transition:background .2s,transform .15s}
+.navBtn:hover{background:rgba(20,30,50,.1)}
+.navBtn:active{transform:scale(.96)}
+.navBtn.primary{background:var(--accent);color:#fff;box-shadow:0 6px 14px rgba(75,92,255,.3)}
+.navBtn.primary:hover{background:#3d4ef0}
+.navBtn svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.hint{font-size:11px;color:var(--ink3);margin-left:4px;white-space:nowrap}
+kbd{font-family:inherit;font-size:11px;background:#fff;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:1px 5px;color:var(--ink2)}
+
+/* ---------- info panel ---------- */
+#info{position:fixed;right:16px;top:78px;width:360px;max-height:calc(100vh - 110px);overflow:auto;padding:18px 20px 18px;z-index:6}
+#info.hidden{transform:translateX(12px)}
+#info h3{margin:10px 0 6px;font-size:21px;letter-spacing:-.01em}
+#info p{margin:0 0 10px;color:var(--ink2);font-size:13.5px;line-height:1.55}
+#info .sec{font-size:11px;font-weight:750;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3);margin:14px 0 6px;display:flex;align-items:center;gap:6px}
+#info .sec::after{content:"";flex:1;height:1px;background:var(--line)}
+#infoSpecs{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;margin:0;font-size:12.5px}
+#infoSpecs dt{color:var(--ink3)}
+#infoSpecs dd{margin:0;font-weight:620;text-align:right;font-variant-numeric:tabular-nums}
+#info .close{position:absolute;right:10px;top:10px;width:30px;height:30px;border-radius:9px;display:grid;place-items:center;font-size:18px;color:var(--ink2)}
+#info .close:hover{background:rgba(20,30,50,.07)}
+.actions{display:flex;gap:6px;margin-top:14px}
+.actions .navBtn{flex:1;justify-content:center}
+.actions .navBtn.on{background:var(--accent);color:#fff}
+
+/* ---------- drawer ---------- */
+#drawer{position:fixed;left:84px;top:78px;bottom:110px;width:270px;padding:12px 8px 12px 12px;z-index:6;display:flex;flex-direction:column}
+#drawer.hidden{transform:translateX(-10px)}
+.drawerHead{display:flex;justify-content:space-between;align-items:center;font-weight:750;font-size:14px;padding:2px 6px 8px}
+.drawerHead span{font-size:12px;color:var(--ink3);font-weight:600}
+#partList{overflow:auto;flex:1;padding-right:4px}
+.grp{font-size:10.5px;font-weight:750;letter-spacing:.09em;text-transform:uppercase;color:var(--ink3);margin:10px 6px 4px}
+.pitem{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:9px;font-size:13px;cursor:pointer;transition:background .15s}
+.pitem:hover{background:rgba(75,92,255,.08)}
+.pitem.sel{background:var(--accentSoft);color:var(--accent);font-weight:650}
+.pitem .dot{width:8px;height:8px;border-radius:50%;flex:none}
+.pitem .nm{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pitem .eye{width:26px;height:22px;border-radius:6px;display:grid;place-items:center;color:var(--ink3)}
+.pitem .eye:hover{background:rgba(20,30,50,.08)}
+.pitem.off .nm{opacity:.4;text-decoration:line-through}
+.pitem .eye svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.8}
+
+/* ---------- tooltip ---------- */
+#tip{position:fixed;left:0;top:0;pointer-events:none;z-index:20;padding:8px 11px;border-radius:10px;background:rgba(20,24,32,.92);color:#fff;font-size:12.5px;line-height:1.35;max-width:260px;transition:opacity .15s;opacity:0}
+#tip b{display:block;font-size:13px}
+#tip span{color:#aab3c5;font-size:11.5px}
+
+/* ---------- labels ---------- */
+#labels{position:fixed;inset:0;pointer-events:none;z-index:4;overflow:hidden}
+.lbl{position:absolute;left:0;top:0;will-change:transform;transition:opacity .3s}
+.lbl .pin{position:absolute;left:-6px;top:-6px;width:12px;height:12px;border-radius:50%;background:#fff;border:3px solid var(--accent);box-shadow:0 2px 6px rgba(0,0,0,.25)}
+.lbl .stem{position:absolute;left:0;bottom:6px;width:1.5px;height:var(--stem,34px);background:rgba(20,24,32,.55);transform-origin:bottom}
+.lbl .card{position:absolute;left:-2px;bottom:calc(var(--stem,34px) + 6px);white-space:nowrap;background:rgba(255,255,255,.94);border-radius:9px;padding:5px 10px;font-size:12px;font-weight:650;box-shadow:0 4px 14px rgba(20,30,60,.18);pointer-events:auto;cursor:pointer;transform:translateX(-12px)}
+.lbl .card small{display:block;font-weight:550;color:var(--ink2);font-size:11px}
+.lbl.down .stem{bottom:auto;top:6px}
+.lbl.down .card{bottom:auto;top:calc(var(--stem,34px) + 6px)}
+.lbl.station .stem{background:rgba(20,24,32,.7)}
+.lbl.station .pin{border-color:var(--hot)}
+.lbl.station .card{background:rgba(20,24,32,.88);color:#fff}
+.lbl.station .card small{color:#ffb79c}
+.lbl.station.coldS .pin{border-color:var(--cold)}
+.lbl.station.coldS .card small{color:#9cc9ff}
+
+/* ---------- gauges ---------- */
+#gauges{position:fixed;left:50%;top:16px;transform:translateX(-50%);display:flex;align-items:center;gap:16px;padding:10px 18px;z-index:5}
+#gauges.hidden{transform:translateX(-50%) translateY(-8px)}
+.g{display:flex;flex-direction:column;align-items:center;width:68px}
+.g svg{width:54px;height:54px}
+.g .v{font-size:13px;font-weight:750;font-variant-numeric:tabular-nums;margin-top:-36px;height:36px}
+.g label{font-size:10px;font-weight:750;color:var(--ink3);letter-spacing:.06em;white-space:nowrap}
+.thr{width:190px;margin-left:6px}
+.thr .rowLbl b{color:var(--hot)}
+.legend{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:650;color:var(--ink2);padding-left:12px;border-left:1px solid var(--line)}
+.legend i{display:inline-block;width:16px;height:6px;border-radius:3px;margin-right:6px;vertical-align:middle}
+@media (max-width:900px){.legend{display:none}}
+
+/* ---------- modals ---------- */
+.modalWrap{position:fixed;inset:0;background:rgba(20,26,38,.25);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);display:grid;place-items:center;z-index:30;transition:opacity .25s}
+.modalWrap.hidden{transform:none}
+.modal{width:min(560px,92vw);max-height:86vh;overflow:auto;padding:22px 24px;background:rgba(255,255,255,.96)}
+.modal h2{margin:0 0 4px;font-size:20px}
+.modal .sub{color:var(--ink2);font-size:13px;margin:0 0 14px}
+.setRow{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:9px 0;border-bottom:1px solid var(--line);font-size:13.5px}
+.setRow:last-child{border-bottom:none}
+.setRow .ctl{display:flex;align-items:center;gap:8px;min-width:200px;justify-content:flex-end}
+.setRow input[type=range]{width:150px;margin:0}
+.setRow output{font-size:12px;color:var(--ink2);min-width:38px;text-align:right;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;background:rgba(20,30,50,.07);border-radius:10px;padding:3px}
+.seg button{padding:6px 11px;border-radius:8px;font-size:12.5px;font-weight:650;color:var(--ink2)}
+.seg button.on{background:#fff;color:var(--accent);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.sw{position:relative;width:40px;height:23px;border-radius:999px;background:rgba(20,30,50,.18);transition:background .2s;flex:none}
+.sw::after{content:"";position:absolute;left:3px;top:3px;width:17px;height:17px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .2s}
+.sw.on{background:var(--accent)}
+.sw.on::after{transform:translateX(17px)}
+.modal .foot{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}
+.keys{display:grid;grid-template-columns:1fr 1fr;gap:6px 20px;font-size:13px}
+.keys div{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--line)}
+.keys div span:first-child{color:var(--ink2)}
+.modal h4{margin:14px 0 6px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink3)}
+
+/* ---------- loader ---------- */
+#loader{position:fixed;inset:0;z-index:40;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 40%,#ffffff 0%,#e3e8ee 55%,#cdd4dc 100%);transition:opacity .9s ease}
+#loader.gone{opacity:0;pointer-events:none}
+.ldBox{width:min(420px,84vw);text-align:center}
+.ldLogo{width:84px;height:84px;margin:0 auto 18px;border-radius:24px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;box-shadow:0 14px 34px rgba(75,92,255,.35)}
+.ldLogo svg{animation:spin 2.4s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.ldTitle{font-size:22px;font-weight:780;letter-spacing:.01em}
+.ldSub{font-size:13px;color:var(--ink2);margin-top:4px}
+.ldBar{height:6px;border-radius:6px;background:rgba(20,30,50,.1);overflow:hidden;margin:22px 0 10px}
+.ldBar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent2));border-radius:6px;transition:width .3s ease}
+.ldStep{font-size:12px;color:var(--ink3);font-variant-numeric:tabular-nums;display:flex;justify-content:space-between}
+
+/* ---------- error / debug ---------- */
+#err{position:fixed;left:50%;top:20px;transform:translateX(-50%);z-index:60;max-width:min(680px,92vw);background:#2a1414;color:#ffd9d0;border-radius:12px;padding:14px 18px;font:12.5px/1.5 ui-monospace,Menlo,Consolas,monospace;box-shadow:0 10px 30px rgba(0,0,0,.35);display:none;white-space:pre-wrap}
+#err b{color:#fff;font-family:Inter,system-ui,sans-serif;font-size:14px;display:block;margin-bottom:6px}
+#dbg{position:fixed;right:16px;bottom:18px;z-index:7;background:rgba(14,18,26,.85);color:#c8f7c5;font:11.5px/1.5 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;border-radius:10px;display:none;min-width:190px;white-space:pre}
+#ctxHint{position:fixed;right:16px;bottom:18px;font-size:12px;color:var(--ink2);padding:8px 12px;z-index:4;display:flex;gap:10px;align-items:center}
+
+@media (max-width: 1100px){
+  #story{width:calc(100vw - 32px);min-width:0;bottom:12px}
+  #explodeBox{bottom:auto;top:78px;left:auto;right:16px;width:220px}
+  #ctxHint{display:none}
+  #info{top:auto;bottom:200px;max-height:42vh;width:calc(100vw - 32px)}
+}
+@media (max-width: 640px){
+  #brand .t2{display:none}
+  #toolbar{top:auto;bottom:206px;transform:none}
+  #toolbar.hidden{transform:translateX(-8px)}
+  #stepTitle{font-size:17px}
+  #stepText{font-size:13px}
+  .hint{display:none}
+  #gauges{top:70px;gap:6px;padding:8px 10px}
+  .thr{width:120px}
+  #drawer{left:16px;right:16px;width:auto;bottom:210px}
+}
+</style>
+
+<script>
+/* Global error capture — registered before the module so load failures are visible too. */
+(function(){
+  function show(msg){
+    var el=document.getElementById('err'); if(!el){ window.__pendingErr=msg; return; }
+    el.style.display='block';
+    el.innerHTML='<b>Something went wrong</b>'+String(msg).replace(/[<>&]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;'}[c];});
+  }
+  window.__showError=show;
+  window.addEventListener('error',function(e){ show((e.message||'Error')+(e.filename?'\n'+e.filename+':'+e.lineno:'')); });
+  window.addEventListener('unhandledrejection',function(e){ var r=e.reason; show(r&&r.stack?r.stack:String(r)); });
+  window.addEventListener('DOMContentLoaded',function(){ if(window.__pendingErr) show(window.__pendingErr); });
+  setTimeout(function(){ if(!window.__appStarted){ show('The 3D engine did not start. Check your internet connection (libraries load from cdn.jsdelivr.net) and that WebGL is enabled.'); } },25000);
+})();
+</script>
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/",
+    "three-mesh-bvh": "https://cdn.jsdelivr.net/npm/three-mesh-bvh@0.8.3/build/index.module.js"
+  }
+}
+</script>
+</head>
+<body>
+<canvas id="c" tabindex="0" aria-label="Interactive 3D turbofan engine"></canvas>
+<div id="labels"></div>
+
+<!-- Brand -->
+<header id="brand" class="glass ui">
+  <div class="logo"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="2.2" fill="#fff"/><path d="M12 9.8C12 6 14 3.6 16.4 3.4M14.2 12c3.8 0 6.2 2 6.4 4.4M12 14.2c0 3.8-2 6.2-4.4 6.4M9.8 12C6 12 3.6 10 3.4 7.6"/></svg></div>
+  <div><div class="t1">AEROS TF-9</div><div class="t2">High-bypass turbofan · Interactive explorer</div></div>
+</header>
+
+<!-- Top right -->
+<div id="topRight" class="glass ui" style="padding:4px">
+  <button class="iconBtn" id="btnParts" data-tip="Components (P)"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg></button>
+  <button class="iconBtn" id="btnHelp" data-tip="Controls & help (H)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.1-2.5 3.6M12 17.2v.1"/></svg></button>
+  <button class="iconBtn" id="btnSettings" data-tip="Settings"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
+  <button class="iconBtn" id="btnFull" data-tip="Fullscreen (F11)"><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+</div>
+
+<!-- Left toolbar -->
+<nav id="toolbar" class="glass ui">
+  <button class="iconBtn" id="tCut" data-tip="Cutaway section (C)"><svg viewBox="0 0 24 24"><path d="M12 3a9 9 0 1 0 9 9h-9z"/><path d="M15 3.5A9 9 0 0 1 20.5 9H15z"/></svg></button>
+  <button class="iconBtn" id="tXray" data-tip="X-ray casings (X)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" stroke-dasharray="2.5 2.5"/><circle cx="12" cy="12" r="3.5"/></svg></button>
+  <button class="iconBtn" id="tFlow" data-tip="Airflow visualisation (A)"><svg viewBox="0 0 24 24"><path d="M3 8h11a3 3 0 1 0-3-3M3 12h16a3 3 0 1 1-3 3M3 16h7"/></svg></button>
+  <button class="iconBtn" id="tRun" data-tip="Run engine (R)"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 12c0-3 1.5-5.5 4-6M12 12c3 0 5.5 1.5 6 4M12 12c0 3-1.5 5.5-4 6M12 12c-3 0-5.5-1.5-6-4"/></svg></button>
+  <div class="sep"></div>
+  <button class="iconBtn" id="tLabels" data-tip="Labels (L)"><svg viewBox="0 0 24 24"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.2"/></svg></button>
+  <button class="iconBtn" id="tReset" data-tip="Reset view (Home)"><svg viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg></button>
+</nav>
+
+<!-- Explode -->
+<div id="explodeBox" class="glass ui">
+  <div class="rowLbl"><span>Exploded view</span><b id="explodeVal">0%</b></div>
+  <input type="range" id="explode" min="0" max="100" value="0" aria-label="Exploded view amount" />
+</div>
+
+<!-- Story / steps -->
+<section id="story" class="glass ui hidden" aria-live="polite">
+  <div class="storyHead"><span id="stepNum">01 / 11</span><span class="chip" id="stepChip">Overview</span></div>
+  <h2 id="stepTitle">AEROS TF-9</h2>
+  <p id="stepText"></p>
+  <div class="storyNav">
+    <button class="navBtn" id="prevBtn" aria-label="Previous step"><svg viewBox="0 0 24 24"><path d="M15 6l-6 6 6 6"/></svg></button>
+    <div id="stepDots"></div>
+    <button class="navBtn" id="playBtn" aria-label="Autoplay"><svg viewBox="0 0 24 24" id="playIco"><path d="M7 5l12 7-12 7z"/></svg></button>
+    <button class="navBtn primary" id="nextBtn"><span id="nextLbl">Next</span><svg viewBox="0 0 24 24"><path d="M9 6l6 6-6 6"/></svg></button>
+  </div>
+</section>
+
+<!-- Info panel -->
+<aside id="info" class="glass ui hidden">
+  <button class="close" id="infoClose" aria-label="Close">×</button>
+  <span class="chip" id="infoModule">Module</span>
+  <h3 id="infoTitle">Part</h3>
+  <p id="infoDesc"></p>
+  <div class="sec">How it works</div>
+  <p id="infoPrinciple"></p>
+  <div class="sec">Specifications</div>
+  <dl id="infoSpecs"></dl>
+  <div class="actions">
+    <button class="navBtn" id="btnFocus">Focus</button>
+    <button class="navBtn" id="btnIsolate">Isolate</button>
+    <button class="navBtn" id="btnHide">Hide</button>
+  </div>
+</aside>
+
+<!-- Components drawer -->
+<aside id="drawer" class="glass ui hidden">
+  <div class="drawerHead">Components <span id="partCount"></span></div>
+  <div id="partList"></div>
+</aside>
+
+<!-- Gauges -->
+<div id="gauges" class="glass ui hidden">
+  <div class="g"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke="rgba(20,30,50,.1)" stroke-width="5" stroke-dasharray="103.7 138.2" transform="rotate(135 27 27)"/><circle id="gaN1" cx="27" cy="27" r="22" fill="none" stroke="#4b5cff" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 138.2" transform="rotate(135 27 27)"/></svg><div class="v" id="gN1">0</div><label>N1 %</label></div>
+  <div class="g"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke="rgba(20,30,50,.1)" stroke-width="5" stroke-dasharray="103.7 138.2" transform="rotate(135 27 27)"/><circle id="gaN2" cx="27" cy="27" r="22" fill="none" stroke="#7b4bff" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 138.2" transform="rotate(135 27 27)"/></svg><div class="v" id="gN2">0</div><label>N2 %</label></div>
+  <div class="g"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke="rgba(20,30,50,.1)" stroke-width="5" stroke-dasharray="103.7 138.2" transform="rotate(135 27 27)"/><circle id="gaEGT" cx="27" cy="27" r="22" fill="none" stroke="#ff6a3d" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 138.2" transform="rotate(135 27 27)"/></svg><div class="v" id="gEGT">15</div><label>EGT °C</label></div>
+  <div class="g"><svg viewBox="0 0 54 54"><circle cx="27" cy="27" r="22" fill="none" stroke="rgba(20,30,50,.1)" stroke-width="5" stroke-dasharray="103.7 138.2" transform="rotate(135 27 27)"/><circle id="gaThr" cx="27" cy="27" r="22" fill="none" stroke="#18b47b" stroke-width="5" stroke-linecap="round" stroke-dasharray="0 138.2" transform="rotate(135 27 27)"/></svg><div class="v" id="gThr">0</div><label>THRUST kN</label></div>
+  <div class="thr">
+    <div class="rowLbl"><span>Throttle</span><b id="thrLbl">IDLE</b></div>
+    <input type="range" id="throttle" min="0" max="100" value="20" aria-label="Throttle" />
+  </div>
+  <div class="legend"><span><i style="background:#2f8cff"></i>Bypass · cold</span><span><i style="background:linear-gradient(90deg,#9fd0ff,#ffc36a,#ff5a1f)"></i>Core · heated</span></div>
+</div>
+
+<div id="ctxHint" class="glass ui"><span><kbd>Click</kbd> inspect</span><span><kbd>Dbl-click</kbd> focus</span><span><kbd>Drag</kbd> orbit</span></div>
+<div id="tip"><b></b><span></span></div>
+
+<!-- Settings -->
+<div id="settingsModal" class="modalWrap ui hidden">
+  <div class="modal glass">
+    <h2>Settings</h2>
+    <p class="sub">Preferences are saved on this device.</p>
+    <div class="setRow"><span>Graphics quality</span><div class="ctl"><div class="seg" id="qualitySeg"><button data-q="low">Low</button><button data-q="medium">Medium</button><button data-q="high">High</button><button data-q="ultra">Ultra</button></div></div></div>
+    <div class="setRow"><span>Resolution scale</span><div class="ctl"><input type="range" id="sRes" min="50" max="100" value="100"><output id="oRes">100%</output></div></div>
+    <div class="setRow"><span>Dynamic resolution (holds frame rate)</span><div class="ctl"><button class="sw" id="sDyn"></button></div></div>
+    <div class="setRow"><span>Soft shadows</span><div class="ctl"><button class="sw" id="sShadows"></button></div></div>
+    <div class="setRow"><span>Bloom glow</span><div class="ctl"><button class="sw" id="sBloom"></button></div></div>
+    <div class="setRow"><span>Field of view</span><div class="ctl"><input type="range" id="sFov" min="25" max="60" value="35"><output id="oFov">35°</output></div></div>
+    <div class="setRow"><span>Orbit sensitivity</span><div class="ctl"><input type="range" id="sSens" min="20" max="200" value="100"><output id="oSens">1.0×</output></div></div>
+    <div class="setRow"><span>Invert vertical orbit</span><div class="ctl"><button class="sw" id="sInvert"></button></div></div>
+    <div class="setRow"><span>Idle auto-rotate</span><div class="ctl"><button class="sw" id="sAuto"></button></div></div>
+    <div class="setRow"><span>Reduced motion</span><div class="ctl"><button class="sw" id="sReduced"></button></div></div>
+    <div class="setRow"><span>Master volume</span><div class="ctl"><input type="range" id="sVol" min="0" max="100" value="70"><output id="oVol">70</output></div></div>
+    <div class="setRow"><span>Engine sound</span><div class="ctl"><input type="range" id="sEngVol" min="0" max="100" value="70"><output id="oEngVol">70</output></div></div>
+    <div class="setRow"><span>Interface sounds</span><div class="ctl"><input type="range" id="sUiVol" min="0" max="100" value="50"><output id="oUiVol">50</output></div></div>
+    <div class="setRow"><span>Captions for audio cues</span><div class="ctl"><button class="sw" id="sCaptions"></button></div></div>
+    <div class="foot"><button class="navBtn" id="sReset">Restore defaults</button><button class="navBtn primary" id="sClose">Done</button></div>
+  </div>
+</div>
+
+<!-- Help -->
+<div id="helpModal" class="modalWrap ui hidden">
+  <div class="modal glass">
+    <h2>Explore the TF-9</h2>
+    <p class="sub">Follow the guided steps, or explore freely: every component can be inspected.</p>
+    <h4>Mouse & touch</h4>
+    <div class="keys">
+      <div><span>Orbit</span><span>Left-drag / 1 finger</span></div>
+      <div><span>Pan</span><span>Right-drag / 2 fingers</span></div>
+      <div><span>Zoom</span><span>Wheel / pinch</span></div>
+      <div><span>Inspect part</span><span>Click / tap</span></div>
+      <div><span>Focus part</span><span>Double-click / double-tap</span></div>
+      <div><span>Hover info</span><span>Point at a part</span></div>
+    </div>
+    <h4>Keyboard</h4>
+    <div class="keys">
+      <div><span>Next / previous step</span><span><kbd>→</kbd> <kbd>←</kbd></span></div>
+      <div><span>Autoplay steps</span><span><kbd>Space</kbd></span></div>
+      <div><span>Explode / collapse</span><span><kbd>E</kbd></span></div>
+      <div><span>Cutaway</span><span><kbd>C</kbd></span></div>
+      <div><span>X-ray</span><span><kbd>X</kbd></span></div>
+      <div><span>Airflow</span><span><kbd>A</kbd></span></div>
+      <div><span>Run engine</span><span><kbd>R</kbd></span></div>
+      <div><span>Throttle</span><span><kbd>↑</kbd> <kbd>↓</kbd></span></div>
+      <div><span>Labels</span><span><kbd>L</kbd></span></div>
+      <div><span>Components list</span><span><kbd>P</kbd></span></div>
+      <div><span>Focus selection</span><span><kbd>F</kbd></span></div>
+      <div><span>Isolate selection</span><span><kbd>I</kbd></span></div>
+      <div><span>Deselect / close</span><span><kbd>Esc</kbd></span></div>
+      <div><span>Reset view</span><span><kbd>Home</kbd></span></div>
+      <div><span>Hide interface</span><span><kbd>U</kbd></span></div>
+      <div><span>Performance overlay</span><span><kbd>F3</kbd> / <kbd>`</kbd></span></div>
+    </div>
+    <h4>Gamepad</h4>
+    <div class="keys">
+      <div><span>Orbit / zoom</span><span>Left stick / right stick</span></div>
+      <div><span>Next / previous</span><span>RB / LB · A / B</span></div>
+      <div><span>Cutaway / run</span><span>X / Y</span></div>
+      <div><span>Throttle</span><span>RT / LT</span></div>
+    </div>
+    <div class="foot"><button class="navBtn primary" id="hClose">Got it</button></div>
+  </div>
+</div>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="ldBox">
+    <div class="ldLogo"><svg width="46" height="46" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.6" stroke-linecap="round"><circle cx="12" cy="12" r="9.2"/><circle cx="12" cy="12" r="2.2" fill="#fff"/><path d="M12 9.8C12 6 14 3.6 16.4 3.4M14.2 12c3.8 0 6.2 2 6.4 4.4M12 14.2c0 3.8-2 6.2-4.4 6.4M9.8 12C6 12 3.6 10 3.4 7.6"/></svg></div>
+    <div class="ldTitle">AEROS TF-9</div>
+    <div class="ldSub">Interactive high-bypass turbofan</div>
+    <div class="ldBar"><i id="ldFill"></i></div>
+    <div class="ldStep"><span id="ldText">Loading engine libraries…</span><span id="ldPct">0%</span></div>
+  </div>
+</div>
+
+<div id="err"></div>
+<div id="dbg"></div>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { OutlinePass } from 'three/addons/postprocessing/OutlinePass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { mergeGeometries, mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
+import { computeBoundsTree, disposeBoundsTree, acceleratedRaycast } from 'three-mesh-bvh';
+
+window.__appStarted = true;
+THREE.BufferGeometry.prototype.computeBoundsTree = computeBoundsTree;
+THREE.BufferGeometry.prototype.disposeBoundsTree = disposeBoundsTree;
+THREE.Mesh.prototype.raycast = acceleratedRaycast;
+
+/* =====================================================================
+   1. CONFIG — every tunable value lives here
+   ===================================================================== */
+const CONFIG = {
+  camera: { fov: 35, near: 0.05, far: 200 },
+  home: { pos: [-5.5, 1.85, 6.1], target: [0, -0.05, -0.15] },
+  orbit: { damping: 0.075, rotateSpeed: 0.75, zoomSpeed: 0.9, panSpeed: 0.8, minDist: 1.0, maxDist: 28 },
+  anim: { partDur: 1.15, stagger: 0.17, camDur: 1.7, cutDur: 1.1, autoplayDelay: 7.5 },
+  spool: { n1Vis: 7.5, n2Vis: 10.5, windmill: 0.10, upRate1: 0.55, upRate2: 0.85, downRate: 0.32 },
+  render: { exposure: 1.0, envIntensity: 1.0, bloomStrength: 0.32, bloomRadius: 0.5, bloomThreshold: 1.3 },
+  section: 0xff6a3d,
+  accent: 0x4b5cff,
+  heat: 0xff6a1c,
+  floorY: -1.62,
+  dynRes: { min: 0.6, low: 47, high: 58 },
+  doorAngle: 58 * Math.PI / 180,
+  trAngle: 40 * Math.PI / 180,
+};
+
+const PRESETS = {
+  low:    { maxDpr: 1.0,  shadows: false, shadowSize: 1024, msaa: 0, bloom: false, particles: 1400 },
+  medium: { maxDpr: 1.25, shadows: true,  shadowSize: 1024, msaa: 2, bloom: true,  particles: 2200 },
+  high:   { maxDpr: 1.5,  shadows: true,  shadowSize: 2048, msaa: 4, bloom: true,  particles: 3400 },
+  ultra:  { maxDpr: 2.0,  shadows: true,  shadowSize: 4096, msaa: 4, bloom: true,  particles: 4600 },
+};
+
+const DEFAULT_SETTINGS = { quality: null, resScale: 100, dynRes: true, shadows: true, bloom: true, fov: 35, sens: 100, invertY: false, autoRotate: true, reducedMotion: false, vol: 70, engVol: 70, uiVol: 50, captions: true };
+
+/* =====================================================================
+   2. SMALL UTILITIES
+   ===================================================================== */
+const $ = (id) => document.getElementById(id);
+const clamp = (x, a, b) => Math.max(a, Math.min(b, x));
+const lerp = (a, b, t) => a + (b - a) * t;
+const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+const rad = (d) => d * Math.PI / 180;
+const TAU = Math.PI * 2;
+const v3 = (a) => new THREE.Vector3(a[0], a[1], a[2]);
+const P = (r, phi, z) => new THREE.Vector3(r * Math.cos(phi), r * Math.sin(phi), z);
+const nextFrame = () => new Promise((res) => requestAnimationFrame(() => res()));
+const Ease = {
+  inOutCubic: (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2,
+  outCubic: (t) => 1 - Math.pow(1 - t, 3),
+  inOutQuart: (t) => t < 0.5 ? 8 * t * t * t * t : 1 - Math.pow(-2 * t + 2, 4) / 2,
+};
+function interp(zs, vs) { // zs descending
+  return (z) => {
+    if (z >= zs[0]) return vs[0];
+    for (let i = 1; i < zs.length; i++) if (z >= zs[i]) { const t = (z - zs[i - 1]) / (zs[i] - zs[i - 1]); return vs[i - 1] + (vs[i] - vs[i - 1]) * t; }
+    return vs[vs.length - 1];
+  };
+}
+function srgb(r, g, b) { const c = new THREE.Color(); c.setRGB(r, g, b, THREE.SRGBColorSpace); return [c.r, c.g, c.b]; }
+
+// Seeded RNG + tileable value noise (periodic lattice) for procedural textures
+function rng(seed) { let s = (seed >>> 0) || 1; return () => { s ^= s << 13; s >>>= 0; s ^= s >>> 17; s ^= s << 5; s >>>= 0; return s / 4294967296; }; }
+function makeNoise2D(seed) {
+  const r = rng(seed); const p = Array.from({ length: 256 }, (_, i) => i);
+  for (let i = 255; i > 0; i--) { const j = Math.floor(r() * (i + 1)); const t = p[i]; p[i] = p[j]; p[j] = t; }
+  const perm = new Uint8Array(512); for (let i = 0; i < 512; i++) perm[i] = p[i & 255];
+  const val = new Float32Array(256); for (let i = 0; i < 256; i++) val[i] = r();
+  return (x, y, px = 256, py = 256) => {
+    const xi = Math.floor(x), yi = Math.floor(y), xf = x - xi, yf = y - yi;
+    const u = xf * xf * (3 - 2 * xf), v = yf * yf * (3 - 2 * yf);
+    const X0 = ((xi % px) + px) % px, X1 = (X0 + 1) % px, Y0 = ((yi % py) + py) % py, Y1 = (Y0 + 1) % py;
+    const h = (a, b) => val[perm[perm[a & 255] + (b & 255)]];
+    const a = h(X0, Y0), b = h(X1, Y0), c = h(X0, Y1), d = h(X1, Y1);
+    return a + (b - a) * u + (c - a) * v + (a - b - c + d) * u * v;
+  };
+}
+const N2 = makeNoise2D(1337);
+function fbm(x, y, oct, px, py) { let s = 0, a = 0.5, f = 1, n = 0; for (let o = 0; o < oct; o++) { s += a * N2(x * f, y * f, px * f, py * f); n += a; a *= 0.5; f *= 2; } return s / n; }
+
+/* =====================================================================
+   3. RENDERER / SCENE / CAMERA / POST
+   ===================================================================== */
+const canvas = $('c');
+let renderer;
+try {
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', stencil: false, alpha: false });
+} catch (e) {
+  window.__showError('WebGL 2 is not available in this browser, so the 3D engine cannot run.\nTry a current Chrome, Edge, Firefox or Safari with hardware acceleration enabled.');
+  throw e;
+}
+if (!renderer.capabilities.isWebGL2) window.__showError('This viewer needs WebGL 2.');
+renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = CONFIG.render.exposure;
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.localClippingEnabled = true;
+renderer.info.autoReset = false;
+const MAX_ANISO = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+
+const scene = new THREE.Scene();
+const camera = new THREE.PerspectiveCamera(CONFIG.camera.fov, innerWidth / innerHeight, CONFIG.camera.near, CONFIG.camera.far);
+camera.position.set(-11, 3.5, 11);
+
+const controls = new OrbitControls(camera, canvas);
+controls.enableDamping = true;
+controls.dampingFactor = CONFIG.orbit.damping;
+controls.rotateSpeed = CONFIG.orbit.rotateSpeed;
+controls.zoomSpeed = CONFIG.orbit.zoomSpeed;
+controls.panSpeed = CONFIG.orbit.panSpeed;
+controls.minDistance = CONFIG.orbit.minDist;
+controls.maxDistance = CONFIG.orbit.maxDist;
+controls.maxPolarAngle = Math.PI * 0.93;
+controls.autoRotateSpeed = 0.6;
+controls.target.set(0, 0, 0);
+
+// Clipping planes for the quarter-section cutaway (quadrant x<0, y>0 removed when active).
+const cutPlanes = [new THREE.Plane(new THREE.Vector3(1, 0, 0), 2), new THREE.Plane(new THREE.Vector3(0, -1, 0), 2)];
+const sectionUniform = { value: new THREE.Color(CONFIG.section) };
+const cutUniform = { value: new THREE.Vector3(2, 2, 0) }; // x: plane0 const, y: plane1 const, z: active
+
+// Post-processing chain
+const rtMain = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+const composer = new EffectComposer(renderer, rtMain);
+const renderPass = new RenderPass(scene, camera);
+const outlinePass = new OutlinePass(new THREE.Vector2(innerWidth, innerHeight), scene, camera);
+outlinePass.edgeStrength = 4.0; outlinePass.edgeGlow = 0.35; outlinePass.edgeThickness = 1.4; outlinePass.pulsePeriod = 0;
+outlinePass.visibleEdgeColor.set(CONFIG.accent); outlinePass.hiddenEdgeColor.set(0x8f9bff);
+const bloomPass = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), CONFIG.render.bloomStrength, CONFIG.render.bloomRadius, CONFIG.render.bloomThreshold);
+const outputPass = new OutputPass();
+composer.addPass(renderPass); composer.addPass(outlinePass); composer.addPass(bloomPass); composer.addPass(outputPass);
+
+// Studio lighting
+const keyLight = new THREE.DirectionalLight(0xffffff, 2.1);
+keyLight.position.set(-4.5, 9, 5.5); keyLight.castShadow = true;
+keyLight.shadow.mapSize.set(2048, 2048);
+Object.assign(keyLight.shadow.camera, { left: -8.5, right: 8.5, top: 8.5, bottom: -8.5, near: 1, far: 30 });
+keyLight.shadow.bias = -0.00035; keyLight.shadow.normalBias = 0.018; keyLight.shadow.radius = 3;
+scene.add(keyLight, keyLight.target);
+const rimLight = new THREE.DirectionalLight(0xd4e3ff, 1.1); rimLight.position.set(7, 3, -8); scene.add(rimLight);
+const hemi = new THREE.HemisphereLight(0xe6eeff, 0x8d8478, 0.35); scene.add(hemi);
+const combustorLight = new THREE.PointLight(0xff7a2a, 0, 2.2, 1.6); combustorLight.position.set(-0.24, 0.24, -0.62); scene.add(combustorLight);
+
+// Procedural studio environment → PMREM (reflections for every metal)
+function buildStudioEnvironment() {
+  const env = new THREE.Scene();
+  const room = new THREE.Mesh(new THREE.SphereGeometry(60, 48, 24), new THREE.ShaderMaterial({
+    side: THREE.BackSide, depthWrite: false,
+    vertexShader: 'varying vec3 vP; void main(){ vP = position; gl_Position = projectionMatrix * modelViewMatrix * vec4(position,1.0); }',
+    fragmentShader: `varying vec3 vP; void main(){ vec3 d = normalize(vP); float h = d.y;
+      vec3 top = vec3(0.92,0.95,1.0); vec3 hor = vec3(0.62,0.64,0.68); vec3 bot = vec3(0.20,0.19,0.18);
+      vec3 c = mix(hor, top, smoothstep(0.0, 0.85, h)); c = mix(c, bot, smoothstep(0.0, -0.6, h));
+      gl_FragColor = vec4(c * 0.9, 1.0); }`,
+  }));
+  env.add(room);
+  const box = (w, h, pos, intensity, color = 0xffffff) => {
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ color: new THREE.Color(color).multiplyScalar(intensity), side: THREE.DoubleSide }));
+    m.position.set(...pos); m.lookAt(0, 0, 0); env.add(m);
+  };
+  box(40, 8, [0, 34, 4], 5.0);             // overhead strip
+  box(14, 22, [-30, 10, 22], 7.0);          // key softbox
+  box(6, 26, [30, 6, -22], 6.0, 0xdfe9ff);  // rim strip
+  box(10, 10, [26, 14, 26], 3.0, 0xfff1e0); // warm fill
+  box(30, 3, [0, 6, -34], 3.5);             // back strip for long reflections on cylinders
+  const pmrem = new THREE.PMREMGenerator(renderer);
+  const rt = pmrem.fromScene(env, 0.035);
+  pmrem.dispose();
+  env.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+  return rt.texture;
+}
+scene.environment = buildStudioEnvironment();
+scene.environmentIntensity = CONFIG.render.envIntensity;
+
+// Gradient backdrop (screen-space) + shadow-catcher floor + soft contact blob
+function gradientTexture() {
+  const c = document.createElement('canvas'); c.width = c.height = 512; const g = c.getContext('2d');
+  const grd = g.createRadialGradient(256, 210, 20, 256, 256, 400);
+  grd.addColorStop(0, '#ffffff'); grd.addColorStop(0.55, '#eef1f5'); grd.addColorStop(1, '#c9d0d8');
+  g.fillStyle = grd; g.fillRect(0, 0, 512, 512);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+}
+scene.background = gradientTexture();
+const floor = new THREE.Mesh(new THREE.PlaneGeometry(60, 60), new THREE.ShadowMaterial({ opacity: 0.2, color: 0x1a2030 }));
+floor.rotation.x = -Math.PI / 2; floor.position.y = CONFIG.floorY; floor.receiveShadow = true; scene.add(floor);
+const blob = (() => {
+  const c = document.createElement('canvas'); c.width = c.height = 256; const g = c.getContext('2d');
+  const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
+  grd.addColorStop(0, 'rgba(18,24,38,0.55)'); grd.addColorStop(0.5, 'rgba(18,24,38,0.18)'); grd.addColorStop(1, 'rgba(18,24,38,0)');
+  g.fillStyle = grd; g.fillRect(0, 0, 256, 256);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: t, transparent: true, depthWrite: false, opacity: 0.55 }));
+  m.rotation.x = -Math.PI / 2; m.position.y = CONFIG.floorY + 0.002; m.scale.set(3.2, 6.2, 1); m.renderOrder = -1; scene.add(m);
+  return m;
+})();
+
+/* =====================================================================
+   4. PROCEDURAL TEXTURES (canvas-generated, tileable)
+   ===================================================================== */
+const TEX = {};
+function makeCanvas(w, h, fill) { const c = document.createElement('canvas'); c.width = w; c.height = h; const ctx = c.getContext('2d'); const img = ctx.createImageData(w, h); fill(img.data, w, h); ctx.putImageData(img, 0, 0); return c; }
+function grayCanvas(H, w, h, map = (v) => v) { return makeCanvas(w, h, (d) => { for (let i = 0; i < w * h; i++) { const v = clamp(map(H[i], i), 0, 1) * 255; d[i * 4] = d[i * 4 + 1] = d[i * 4 + 2] = v; d[i * 4 + 3] = 255; } }); }
+function normalCanvas(H, w, h, str) {
+  return makeCanvas(w, h, (d) => {
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const l = H[y * w + (x - 1 + w) % w], r = H[y * w + (x + 1) % w], u = H[((y - 1 + h) % h) * w + x], dn = H[((y + 1) % h) * w + x];
+      const nx = (l - r) * str, ny = (dn - u) * str, L = Math.hypot(nx, ny, 1), i = (y * w + x) * 4;
+      d[i] = (nx / L * 0.5 + 0.5) * 255; d[i + 1] = (ny / L * 0.5 + 0.5) * 255; d[i + 2] = (1 / L * 0.5 + 0.5) * 255; d[i + 3] = 255;
+    }
+  });
+}
+function tex(c, { srgb: isColor = false, repeat = [1, 1] } = {}) {
+  const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.repeat.set(repeat[0], repeat[1]);
+  t.colorSpace = isColor ? THREE.SRGBColorSpace : THREE.NoColorSpace; t.anisotropy = MAX_ANISO; t.needsUpdate = true; return t;
+}
+function rep(t, x, y) { const c = t.clone(); c.repeat.set(x, y); c.needsUpdate = true; return c; }
+
+function buildTextures() {
+  // Lathe-turned machining rings (roughness + micro normal). UV v is in metres; 1 tile = 0.25 m.
+  {
+    const w = 128, h = 512, H = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) {
+      const row = 0.55 * N2(3.3, y * 0.5, 64, 256) + 0.3 * N2(7.1, y * 1.0, 64, 512) + 0.15 * N2(1.7, y * 2.0, 64, 1024);
+      for (let x = 0; x < w; x++) H[y * w + x] = row * 0.85 + 0.15 * N2(x * 0.125, y * 0.5, 16, 256);
+    }
+    TEX.brushR = tex(grayCanvas(H, w, h, (v) => 0.68 + 0.32 * v), { repeat: [1, 4] });
+    TEX.brushN = tex(normalCanvas(H, w, h, 1.1), { repeat: [1, 4] });
+  }
+  // Orange-peel paint micro normal
+  {
+    const w = 256, h = 256, H = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) H[y * w + x] = fbm(x / 256 * 24, y / 256 * 24, 3, 24, 24);
+    TEX.peelN = tex(normalCanvas(H, w, h, 1.6), { repeat: [5, 5] });
+  }
+  // Perforated acoustic liner (hex hole pattern), tile = 0.05 m
+  {
+    const w = 256, h = 256, cols = 8, rows = 8, px = w / cols, py = h / rows, rr = px * 0.27, H = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      let dmin = 1e9; const ry = Math.floor(y / py);
+      for (let dr = -1; dr <= 1; dr++) {
+        const r2 = ry + dr, cy = (r2 + 0.5) * py, off = (((r2 % 2) + 2) % 2) * 0.5 * px, ci = Math.floor((x - off) / px);
+        for (let dc = -1; dc <= 1; dc++) { const cx = (ci + dc + 0.5) * px + off, dx = x - cx, dy = y - cy; dmin = Math.min(dmin, dx * dx + dy * dy); }
+      }
+      H[y * w + x] = smooth(rr - 1.4, rr + 1.4, Math.sqrt(dmin));
+    }
+    TEX.perfC = tex(makeCanvas(w, h, (d) => { for (let i = 0; i < w * h; i++) { const n = N2((i % w) * 0.05, Math.floor(i / w) * 0.05, 12.8, 12.8); const v = H[i] * (150 + n * 30) + (1 - H[i]) * 28; d[i * 4] = v; d[i * 4 + 1] = v * 1.02; d[i * 4 + 2] = v * 1.05; d[i * 4 + 3] = 255; } }), { srgb: true, repeat: [20, 20] });
+    TEX.perfN = tex(normalCanvas(H, w, h, 2.2), { repeat: [20, 20] });
+    TEX.perfR = tex(grayCanvas(H, w, h, (v) => 0.95 - v * 0.35), { repeat: [20, 20] });
+  }
+  // Carbon twill weave (fan case & blade composite), 8 tows per tile
+  const weave = (x, y, tow) => {
+    const tx = Math.floor(x / tow), ty = Math.floor(y / tow), fx = (x % tow) / tow, fy = (y % tow) / tow;
+    const warpTop = (((tx - ty) % 4) + 4) % 4 < 2;
+    const prof = warpTop ? Math.sin(Math.PI * fx) : Math.sin(Math.PI * fy);
+    const fib = warpTop ? N2(x * 0.9, y * 0.04, 512, 512) : N2(x * 0.04, y * 0.9, 512, 512);
+    return { h: prof * 0.8 + fib * 0.2, warp: warpTop, prof, fib };
+  };
+  {
+    const w = 512, h = 512, H = new Float32Array(w * h);
+    const c = makeCanvas(w, h, (d) => {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const s = weave(x, y, 64), i = y * w + x; H[i] = s.h;
+        const v = 22 + (s.warp ? 14 : 6) + s.prof * 14 + s.fib * 10;
+        d[i * 4] = v; d[i * 4 + 1] = v * 1.04; d[i * 4 + 2] = v * 1.12; d[i * 4 + 3] = 255;
+      }
+    });
+    TEX.weaveC = tex(c, { srgb: true, repeat: [8, 8] });
+    TEX.weaveN = tex(normalCanvas(H, w, h, 1.4), { repeat: [8, 8] });
+  }
+  // Fan blade map: composite body + titanium leading-edge sheath (u = chord, v = span)
+  {
+    const w = 512, h = 512, H = new Float32Array(w * h), sheath = 0.085 * w;
+    const col = makeCanvas(w, h, (d) => {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x, s = weave((x * 3) % w, (y * 5) % h, 32), t = smooth(sheath - 2, sheath + 2, x);
+        H[i] = t * s.h * 0.6 + (1 - t) * 0.9;
+        const comp = 26 + (s.warp ? 10 : 4) + s.prof * 9 + s.fib * 6;
+        const ti = 196 + N2(x * 0.02, y * 0.6, 10.24, 307.2) * 22;
+        const v = lerp(ti, comp, t);
+        d[i * 4] = v * (t > 0.5 ? 1.0 : 0.99); d[i * 4 + 1] = v * (t > 0.5 ? 1.05 : 1.0); d[i * 4 + 2] = v * (t > 0.5 ? 1.16 : 1.02); d[i * 4 + 3] = 255;
+      }
+    });
+    const orm = makeCanvas(w, h, (d) => {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = y * w + x, t = smooth(sheath - 2, sheath + 2, x);
+        d[i * 4] = 255; d[i * 4 + 1] = lerp(0.26, 0.46, t) * 255; d[i * 4 + 2] = lerp(1, 0.0, t) * 255; d[i * 4 + 3] = 255;
+      }
+    });
+    TEX.bladeC = tex(col, { srgb: true }); TEX.bladeORM = tex(orm); TEX.bladeN = tex(normalCanvas(H, w, h, 1.2));
+    TEX.bladeC.wrapS = TEX.bladeC.wrapT = THREE.ClampToEdgeWrapping;
+  }
+  // Combustor effusion cooling holes + panel seams, tile = 0.1 m
+  {
+    const w = 256, h = 256, n = 14, H = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const cy = Math.floor(y / (h / n)), off = (cy % 2) * 0.5;
+      const fx = ((x / (w / n)) - off) % 1, fy = (y / (h / n)) % 1;
+      const dx = (fx < 0 ? fx + 1 : fx) - 0.5, dy = fy - 0.5, dd = Math.hypot(dx, dy * 1.3);
+      let v = smooth(0.12, 0.2, dd);
+      if (y < 4) v *= 0.55 + 0.1 * y;
+      H[y * w + x] = v;
+    }
+    TEX.holesC = tex(grayCanvas(H, w, h, (v, i) => 0.25 + 0.75 * v * (0.9 + 0.1 * N2((i % w) * 0.04, Math.floor(i / w) * 0.04, 10.24, 10.24))), { srgb: true, repeat: [10, 10] });
+    TEX.holesN = tex(normalCanvas(H, w, h, 1.6), { repeat: [10, 10] });
+  }
+  // Braided harness over-braid
+  {
+    const w = 128, h = 128, H = new Float32Array(w * h), per = 16;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+      const a = ((x + y) % per) / per, b = ((((x - y) % per) + per) % per) / per;
+      const over = (Math.floor((x + y) / per) + Math.floor((x - y + 512) / per)) % 2 === 0;
+      const s1 = Math.sin(Math.PI * a), s2 = Math.sin(Math.PI * b);
+      H[y * w + x] = over ? Math.max(s1, s2 * 0.6) : Math.max(s1 * 0.6, s2);
+    }
+    TEX.braidC = tex(grayCanvas(H, w, h, (v) => 0.45 + 0.55 * v), { srgb: true, repeat: [60, 2] });
+    TEX.braidN = tex(normalCanvas(H, w, h, 2.0), { repeat: [60, 2] });
+  }
+  // Sand-cast housing
+  {
+    const w = 256, h = 256, H = new Float32Array(w * h);
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) H[y * w + x] = fbm(x / 256 * 32, y / 256 * 32, 3, 32, 32) * 0.7 + N2(x * 0.5, y * 0.5, 128, 128) * 0.3;
+    TEX.castN = tex(normalCanvas(H, w, h, 2.4), { repeat: [5, 5] });
+    TEX.castR = tex(grayCanvas(H, w, h, (v) => 0.75 + 0.25 * v), { repeat: [5, 5] });
+  }
+  // Spinner livery: gloss black with white spiral (uv normalised)
+  {
+    const w = 1024, h = 512;
+    TEX.spinner = tex(makeCanvas(w, h, (d) => {
+      for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
+        const i = (y * w + x) * 4, u = x / w, v = 1 - y / h;
+        let white = 0;
+        if (v > 0.37) { const tc = (v - 0.37) / 0.63, f = (u + tc * 0.85) % 1, width = 0.03 + 0.05 * (1 - tc); white = smooth(width + 0.004, width - 0.004, Math.abs(f - 0.5) * 2 > 1 - width * 2 ? 0 : Math.min(f, 1 - f)); }
+        if (v > 0.985) white = 1;
+        const base = 14;
+        const val = lerp(base, 242, white);
+        d[i] = val; d[i + 1] = val; d[i + 2] = val * 1.02; d[i + 3] = 255;
+      }
+    }), { srgb: true });
+    TEX.spinner.wrapT = THREE.ClampToEdgeWrapping;
+  }
+  // Decals (logotype + stencil)
+  {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 256; const g = c.getContext('2d');
+    g.clearRect(0, 0, 1024, 256);
+    const grad = g.createLinearGradient(0, 0, 1024, 0); grad.addColorStop(0, '#4b5cff'); grad.addColorStop(1, '#8a4bff');
+    g.fillStyle = grad; g.beginPath(); g.moveTo(30, 200); g.lineTo(560, 200); g.lineTo(548, 214); g.lineTo(18, 214); g.closePath(); g.fill();
+    g.fillStyle = '#1b2232'; g.font = '800 132px Inter, "Segoe UI", Arial, sans-serif'; g.textBaseline = 'alphabetic';
+    g.fillText('AEROS', 26, 172);
+    g.font = 'italic 800 132px Inter, "Segoe UI", Arial, sans-serif'; g.fillStyle = '#4b5cff'; g.fillText('TF-9', 600, 172);
+    TEX.logo = new THREE.CanvasTexture(c); TEX.logo.colorSpace = THREE.SRGBColorSpace; TEX.logo.anisotropy = MAX_ANISO;
+    const s = document.createElement('canvas'); s.width = 512; s.height = 128; const sg = s.getContext('2d');
+    sg.strokeStyle = '#1b2232'; sg.lineWidth = 6; sg.strokeRect(8, 8, 496, 112);
+    sg.fillStyle = '#1b2232'; sg.font = '800 64px Inter, "Segoe UI", Arial, sans-serif'; sg.textAlign = 'center'; sg.textBaseline = 'middle'; sg.fillText('NO STEP', 256, 68);
+    TEX.nostep = new THREE.CanvasTexture(s); TEX.nostep.colorSpace = THREE.SRGBColorSpace; TEX.nostep.anisotropy = MAX_ANISO;
+  }
+}
+
+/* =====================================================================
+   5. MATERIALS (base library — cloned per part at registration)
+   ===================================================================== */
+const M = {};
+function buildMaterials() {
+  const v2 = (a) => new THREE.Vector2(a, a);
+  M.paint = new THREE.MeshPhysicalMaterial({ color: 0xf2f4f6, roughness: 0.36, metalness: 0, clearcoat: 0.8, clearcoatRoughness: 0.12, normalMap: TEX.peelN, normalScale: v2(0.12) });
+  M.paintGray = new THREE.MeshPhysicalMaterial({ color: 0xa3abb4, roughness: 0.5, metalness: 0.05, clearcoat: 0.35, clearcoatRoughness: 0.3, normalMap: TEX.peelN, normalScale: v2(0.1) });
+  M.accent = new THREE.MeshPhysicalMaterial({ color: 0x4b5cff, roughness: 0.3, clearcoat: 1, clearcoatRoughness: 0.08 });
+  M.pin = new THREE.MeshPhysicalMaterial({ color: 0x1b2232, roughness: 0.35, clearcoat: 1 });
+  M.cowlInner = new THREE.MeshStandardMaterial({ color: 0x585e66, roughness: 0.7, metalness: 0.1, normalMap: TEX.weaveN, normalScale: v2(0.25) });
+  M.lip = new THREE.MeshPhysicalMaterial({ color: 0xe1e5ea, metalness: 1, roughness: 0.14, roughnessMap: TEX.brushR, normalMap: TEX.brushN, normalScale: v2(0.15) });
+  M.liner = new THREE.MeshStandardMaterial({ color: 0x9aa1a8, map: TEX.perfC, normalMap: TEX.perfN, normalScale: v2(0.6), roughness: 0.62, roughnessMap: TEX.perfR, metalness: 0.4 });
+  M.carbon = new THREE.MeshPhysicalMaterial({ color: 0xffffff, map: TEX.weaveC, normalMap: TEX.weaveN, normalScale: v2(0.35), roughness: 0.4, metalness: 0, clearcoat: 0.7, clearcoatRoughness: 0.18 });
+  M.steel = new THREE.MeshStandardMaterial({ color: 0xb8bdc3, metalness: 1, roughness: 0.32, roughnessMap: TEX.brushR, normalMap: TEX.brushN, normalScale: v2(0.25) });
+  M.steelDark = new THREE.MeshStandardMaterial({ color: 0x6f757d, metalness: 1, roughness: 0.42, roughnessMap: TEX.brushR, normalMap: TEX.brushN, normalScale: v2(0.2) });
+  M.titanium = new THREE.MeshPhysicalMaterial({ color: 0xc6c9ce, metalness: 1, roughness: 0.24, roughnessMap: TEX.brushR, normalMap: TEX.brushN, normalScale: v2(0.2) });
+  M.chrome = new THREE.MeshStandardMaterial({ color: 0xe8ebee, metalness: 1, roughness: 0.08 });
+  M.abradable = new THREE.MeshStandardMaterial({ color: 0xbab3a7, roughness: 0.88, metalness: 0.1, normalMap: TEX.castN, normalScale: v2(0.5) });
+  M.composite = new THREE.MeshPhysicalMaterial({ color: 0x8e969f, roughness: 0.5, metalness: 0.1, clearcoat: 0.3, normalMap: TEX.peelN, normalScale: v2(0.1) });
+  M.bladeTi = new THREE.MeshStandardMaterial({ color: 0xcfd2d6, metalness: 1, roughness: 0.22, side: THREE.DoubleSide });
+  M.bladeSteel = new THREE.MeshStandardMaterial({ color: 0xb2b6bb, metalness: 1, roughness: 0.3, side: THREE.DoubleSide });
+  M.ogv = new THREE.MeshStandardMaterial({ color: 0xa9b0b7, metalness: 0.85, roughness: 0.38, side: THREE.DoubleSide });
+  M.strut = new THREE.MeshStandardMaterial({ color: 0x9aa1a8, metalness: 0.9, roughness: 0.35, side: THREE.DoubleSide });
+  M.fanBlade = new THREE.MeshPhysicalMaterial({ map: TEX.bladeC, roughnessMap: TEX.bladeORM, metalnessMap: TEX.bladeORM, roughness: 1, metalness: 1, normalMap: TEX.bladeN, normalScale: v2(0.4), clearcoat: 0.8, clearcoatRoughness: 0.14, side: THREE.DoubleSide });
+  M.bladeNi = new THREE.MeshPhysicalMaterial({ color: 0xffffff, vertexColors: true, metalness: 1, roughness: 0.34, iridescence: 0.55, iridescenceIOR: 1.8, iridescenceThicknessRange: [240, 520], side: THREE.DoubleSide });
+  M.bladeTBC = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, roughness: 0.58, metalness: 0.15, side: THREE.DoubleSide });
+  M.heat = new THREE.MeshPhysicalMaterial({ color: 0xffffff, vertexColors: true, metalness: 1, roughness: 0.36, roughnessMap: TEX.brushR, normalMap: TEX.brushN, normalScale: v2(0.2), iridescence: 0.35, iridescenceIOR: 1.7, iridescenceThicknessRange: [200, 420] });
+  M.linerHot = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, map: TEX.holesC, normalMap: TEX.holesN, normalScale: v2(0.5), metalness: 0.85, roughness: 0.48 });
+  M.plug = new THREE.MeshStandardMaterial({ color: 0xffffff, vertexColors: true, map: TEX.perfC, normalMap: TEX.perfN, normalScale: v2(0.5), metalness: 0.9, roughness: 0.45 });
+  M.disk = new THREE.MeshStandardMaterial({ color: 0x8e9399, metalness: 1, roughness: 0.3, roughnessMap: TEX.brushR, normalMap: TEX.brushN, normalScale: v2(0.25) });
+  M.tube = new THREE.MeshStandardMaterial({ color: 0xd3d7dc, metalness: 1, roughness: 0.18 });
+  M.tubeHot = new THREE.MeshPhysicalMaterial({ color: 0xc9b896, metalness: 1, roughness: 0.3, iridescence: 0.4, iridescenceThicknessRange: [250, 450] });
+  M.brass = new THREE.MeshStandardMaterial({ color: 0xc9a457, metalness: 1, roughness: 0.3 });
+  M.cad = new THREE.MeshStandardMaterial({ color: 0xb9a76e, metalness: 0.9, roughness: 0.38 });
+  M.harness = new THREE.MeshStandardMaterial({ color: 0xa48a68, map: TEX.braidC, normalMap: TEX.braidN, normalScale: v2(0.8), roughness: 0.78, metalness: 0.05 });
+  M.harnessSilver = new THREE.MeshStandardMaterial({ color: 0xb9bec4, map: TEX.braidC, normalMap: TEX.braidN, normalScale: v2(0.8), roughness: 0.45, metalness: 0.8 });
+  M.cast = new THREE.MeshStandardMaterial({ color: 0x9ea4aa, roughness: 0.75, roughnessMap: TEX.castR, metalness: 0.65, normalMap: TEX.castN, normalScale: v2(0.6) });
+  M.accessory = new THREE.MeshPhysicalMaterial({ color: 0x55636f, roughness: 0.42, metalness: 0.2, clearcoat: 0.6, clearcoatRoughness: 0.2 });
+  M.accessory2 = new THREE.MeshPhysicalMaterial({ color: 0x6d7b5e, roughness: 0.45, metalness: 0.15, clearcoat: 0.5 });
+  M.eec = new THREE.MeshPhysicalMaterial({ color: 0x3b424c, roughness: 0.4, metalness: 0.6, clearcoat: 0.4 });
+  M.bolt = new THREE.MeshStandardMaterial({ color: 0xa3a9af, metalness: 1, roughness: 0.32 });
+  M.rubber = new THREE.MeshStandardMaterial({ color: 0x24272b, roughness: 0.8, metalness: 0 });
+  M.spinner = new THREE.MeshPhysicalMaterial({ map: TEX.spinner, roughness: 0.22, metalness: 0.15, clearcoat: 1, clearcoatRoughness: 0.04 });
+  M.logo = new THREE.MeshPhysicalMaterial({ map: TEX.logo, transparent: true, roughness: 0.32, clearcoat: 0.8, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  M.nostep = new THREE.MeshPhysicalMaterial({ map: TEX.nostep, transparent: true, roughness: 0.4, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 });
+  // Thin (open, double-sided) surfaces are clipped in cutaway but get no section fill
+  for (const k of ['bladeTi', 'bladeSteel', 'ogv', 'strut', 'fanBlade', 'bladeNi', 'bladeTBC', 'logo', 'nostep']) M[k].userData.thin = true;
+}
+
+// Section-fill injection: back faces revealed by the cutaway render as a hatched "cut" colour.
+function applySection(mat) {
+  mat.side = THREE.DoubleSide;
+  mat.clippingPlanes = cutPlanes; mat.clipIntersection = true; mat.clipShadows = true;
+  mat.onBeforeCompile = (shader) => {
+    shader.uniforms.uSection = sectionUniform; shader.uniforms.uCut = cutUniform;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', '#include <common>\nuniform vec3 uSection;\nuniform vec3 uCut;')
+      .replace('#include <opaque_fragment>', `#include <opaque_fragment>
+        if (!gl_FrontFacing && uCut.z > 0.5) {
+          vec3 wp = (inverse(viewMatrix) * vec4(-vViewPosition, 1.0)).xyz;
+          float d1 = (wp.y > uCut.y - 0.05) ? abs(wp.x + uCut.x) : 1e3;
+          float d2 = (wp.x < -uCut.x + 0.05) ? abs(wp.y - uCut.y) : 1e3;
+          if (min(d1, d2) < 0.5) { float hatch = step(0.5, fract((gl_FragCoord.x + gl_FragCoord.y) * 0.0625)); gl_FragColor = vec4(uSection * (0.82 + 0.18 * hatch), 1.0); }
+        }`);
+  };
+}
+function applyClipOnly(mat) { mat.clippingPlanes = cutPlanes; mat.clipIntersection = true; mat.clipShadows = true; }
+
+// X-ray / isolate ghost material (fresnel glass)
+function makeGhost(clip) {
+  const m = new THREE.ShaderMaterial({
+    uniforms: { uColor: { value: new THREE.Color(0x3c5a86) }, uOpacity: { value: 0.55 } },
+    vertexShader: `
+      #include <common>
+      #include <clipping_planes_pars_vertex>
+      varying vec3 vN; varying vec3 vV;
+      void main(){
+        #include <begin_vertex>
+        #include <project_vertex>
+        #include <clipping_planes_vertex>
+        vN = normalize(normalMatrix * normal); vV = -mvPosition.xyz;
+      }`,
+    fragmentShader: `
+      #include <common>
+      #include <clipping_planes_pars_fragment>
+      uniform vec3 uColor; uniform float uOpacity; varying vec3 vN; varying vec3 vV;
+      void main(){
+        #include <clipping_planes_fragment>
+        float f = 1.0 - abs(dot(normalize(vN), normalize(vV)));
+        f = pow(f, 2.2);
+        gl_FragColor = vec4(uColor * (0.7 + 0.6 * f), (0.035 + 0.6 * f) * uOpacity);
+      }`,
+    transparent: true, depthWrite: false, side: THREE.DoubleSide,
+  });
+  if (clip) { m.clipping = true; m.clippingPlanes = cutPlanes; m.clipIntersection = true; }
+  return m;
+}
+const GHOST = { clip: makeGhost(true), plain: makeGhost(false) };
+
+/* =====================================================================
+   6. GEOMETRY BUILDERS
+   ===================================================================== */
+// Ensure closed (r,z) profile is counter-clockwise ⇒ outward-facing lathe. Material index m belongs to segment starting at that point.
+function orientCCW(p) {
+  let A = 0; for (let i = 0; i < p.length; i++) { const a = p[i], b = p[(i + 1) % p.length]; A += a[0] * b[1] - b[0] * a[1]; }
+  if (A >= 0) return p;
+  const n = p.length, q = [];
+  for (let j = 0; j < n; j++) { const s = p[n - 1 - j], m = p[((n - 2 - j) % n + n) % n][2]; q.push([s[0], s[1], m]); }
+  return q;
+}
+function dedupe(p) { const o = []; for (const q of p) { const l = o[o.length - 1]; if (l && Math.abs(l[0] - q[0]) < 1e-6 && Math.abs(l[1] - q[1]) < 1e-6) continue; o.push(q); } const f = o[0], l = o[o.length - 1]; if (o.length > 2 && Math.abs(f[0] - l[0]) < 1e-6 && Math.abs(f[1] - l[1]) < 1e-6) o.pop(); return o; }
+
+/** Custom lathe around the Z axis with sharp-edge preservation, metre-based UVs, material groups and optional vertex colours. */
+function lathe(profileIn, o = {}) {
+  const segs = o.segments ?? 96, phi0 = o.phiStart ?? -Math.PI / 2, phiLen = o.phiLength ?? TAU, closed = o.closed ?? true;
+  let prof = profileIn.map((p) => [p[0], p[1], p[2] ?? 0]);
+  if (closed) prof = orientCCW(dedupe(prof));
+  const pts = closed ? [...prof, prof[0]] : prof, nSeg = pts.length - 1;
+  const smoothCos = Math.cos(rad(o.smooth ?? 36));
+  const segN = [], segL = [];
+  for (let i = 0; i < nSeg; i++) { const dr = pts[i + 1][0] - pts[i][0], dz = pts[i + 1][1] - pts[i][1], L = Math.hypot(dr, dz); segL.push(L); segN.push(L > 1e-7 ? [dz / L, -dr / L] : null); }
+  const vAcc = [0]; for (let i = 0; i < nSeg; i++) vAcc.push(vAcc[i] + segL[i]); const total = vAcc[nSeg] || 1;
+  let rSum = 0; for (const p of pts) rSum += p[0]; const uRange = o.uvNormalize ? 1 : Math.max(1, Math.round(TAU * rSum / pts.length));
+  const pos = [], nor = [], uv = [], col = o.color ? [] : null, idx = [], groups = []; let vtx = 0;
+  const findPrev = (i) => { let j = i - 1; for (let k = 0; k < nSeg; k++) { if (j < 0) { if (!closed) return -1; j = nSeg - 1; } if (segN[j]) return j; j--; } return -1; };
+  const findNext = (i) => { let j = i + 1; for (let k = 0; k < nSeg; k++) { if (j >= nSeg) { if (!closed) return -1; j = 0; } if (segN[j]) return j; j++; } return -1; };
+  for (let i = 0; i < nSeg; i++) {
+    const n = segN[i]; if (!n) continue;
+    const pi = findPrev(i), ni = findNext(i); let n0 = n, n1 = n;
+    if (pi >= 0 && pi !== i) { const q = segN[pi]; if (q[0] * n[0] + q[1] * n[1] > smoothCos) { const a = q[0] + n[0], b = q[1] + n[1], l = Math.hypot(a, b); n0 = [a / l, b / l]; } }
+    if (ni >= 0 && ni !== i) { const q = segN[ni]; if (q[0] * n[0] + q[1] * n[1] > smoothCos) { const a = q[0] + n[0], b = q[1] + n[1], l = Math.hypot(a, b); n1 = [a / l, b / l]; } }
+    const A = pts[i], B = pts[i + 1], base = vtx;
+    const va = o.uvNormalize ? vAcc[i] / total : vAcc[i], vb = o.uvNormalize ? vAcc[i + 1] / total : vAcc[i + 1];
+    for (let j = 0; j <= segs; j++) {
+      const t = j / segs, phi = phi0 + phiLen * t, c = Math.cos(phi), s = Math.sin(phi);
+      const u = o.uvNormalize ? t : (phiLen * t) / TAU * uRange;
+      pos.push(A[0] * c, A[0] * s, A[1], B[0] * c, B[0] * s, B[1]);
+      nor.push(n0[0] * c, n0[0] * s, n0[1], n1[0] * c, n1[0] * s, n1[1]);
+      uv.push(u, va, u, vb);
+      if (col) { const a = o.color(A[0], A[1], phi), b = o.color(B[0], B[1], phi); col.push(a[0], a[1], a[2], b[0], b[1], b[2]); }
+      vtx += 2;
+    }
+    const i0 = idx.length;
+    for (let j = 0; j < segs; j++) { const a = base + j * 2, b = a + 1, d = a + 2, c = a + 3; idx.push(a, c, b, a, d, c); }
+    const m = A[2], last = groups[groups.length - 1];
+    if (last && last.m === m && last.start + last.count === i0) last.count += idx.length - i0; else groups.push({ start: i0, count: idx.length - i0, m });
+  }
+  const g = new THREE.BufferGeometry();
+  g.setIndex(idx);
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  if (col) g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  if (groups.some((q) => q.m !== 0)) for (const q of groups) g.addGroup(q.start, q.count, q.m);
+  return g;
+}
+// Flat cap that closes a partial lathe at angle phi (flip for the end cap).
+function profileCap(profileIn, phi, flip) {
+  const prof = orientCCW(dedupe(profileIn.map((p) => [p[0], p[1], 0])));
+  const g = new THREE.ShapeGeometry(new THREE.Shape(prof.map((p) => new THREE.Vector2(p[0], p[1]))));
+  const pos = g.attributes.position, c = Math.cos(phi), s = Math.sin(phi);
+  for (let i = 0; i < pos.count; i++) { const x = pos.getX(i), y = pos.getY(i); pos.setXYZ(i, x * c, x * s, y); }
+  let nx = s, ny = -c;
+  if (flip) { nx = -nx; ny = -ny; const ix = g.index.array; for (let i = 0; i < ix.length; i += 3) { const t = ix[i + 1]; ix[i + 1] = ix[i + 2]; ix[i + 2] = t; } }
+  const nor = g.attributes.normal; for (let i = 0; i < nor.count; i++) nor.setXYZ(i, nx, ny, 0);
+  return g;
+}
+function mesh(geo, mat, { cast = true, receive = true, name } = {}) { const m = new THREE.Mesh(geo, mat); m.castShadow = cast; m.receiveShadow = receive; if (name) m.name = name; return m; }
+function merge(list, label = 'geometry') { const g = mergeGeometries(list, false); if (!g) throw new Error('mergeGeometries failed for ' + label); list.forEach((x) => x.dispose()); return g; }
+
+function partialSolid(profile, phiStart, phiLen, segments = 48) {
+  return merge([lathe(profile, { phiStart, phiLength: phiLen, segments }), profileCap(profile, phiStart, false), profileCap(profile, phiStart + phiLen, true)], 'partialSolid');
+}
+/** Partial lathe shell (with flat end caps) — used for split cowls and split casings. */
+function shell(profile, phiStart, phiLen, mats, { segments = 64, capMat = 0, color } = {}) {
+  const grp = new THREE.Group();
+  grp.add(mesh(lathe(profile, { phiStart, phiLength: phiLen, segments, color }), mats.length > 1 ? mats : mats[0]));
+  const capGeo = merge([profileCap(profile, phiStart, false), profileCap(profile, phiStart + phiLen, true)], 'caps');
+  if (color) { const n = capGeo.attributes.position.count, arr = new Float32Array(n * 3); for (let i = 0; i < n; i++) { const p = capGeo.attributes.position; const r = Math.hypot(p.getX(i), p.getY(i)); const c = color(r, p.getZ(i), 0); arr.set(c, i * 3); } capGeo.setAttribute('color', new THREE.BufferAttribute(arr, 3)); }
+  grp.add(mesh(capGeo, mats[capMat]));
+  return grp;
+}
+
+/** Procedural airfoil blade: NACA-style thickness on a parabolic camber line, stacked radially with stagger, sweep and lean. */
+function bladeGeometry(B) {
+  const S = B.nSpan, C = B.nChord, us = [], sides = [];
+  for (let i = 0; i <= C; i++) { us.push(0.5 * (1 + Math.cos(Math.PI * i / C))); sides.push(1); }
+  for (let i = 1; i <= C; i++) { us.push(0.5 * (1 - Math.cos(Math.PI * i / C))); sides.push(-1); }
+  const L = us.length, nV = (S + 1) * L + 1;
+  const pos = new Float32Array(nV * 3), uv = new Float32Array(nV * 2), col = B.color ? new Float32Array(nV * 3) : null;
+  let tipC = [0, 0, 0];
+  for (let j = 0; j <= S; j++) {
+    const s = j / S, r = lerp(B.rHub, B.rTip, s), c = B.chord(s), beta = B.stagger(s), m = B.camber(s), th = B.thick(s);
+    const sw = B.sweep ? B.sweep(s) : 0, ln = B.lean ? B.lean(s) : 0, sb = Math.sin(beta), cb = Math.cos(beta);
+    for (let i = 0; i < L; i++) {
+      const u = us[i], yc = 4 * m * u * (1 - u);
+      const yt = 5 * th * (0.2969 * Math.sqrt(u) - 0.126 * u - 0.3516 * u * u + 0.2843 * u * u * u - 0.1036 * u * u * u * u);
+      const y = (yc + sides[i] * yt) * c, X = (u - 0.42) * c;
+      const t = -X * sb - y * cb + ln, a = -X * cb + y * sb + sw, phi = t / r, k = j * L + i;
+      pos[k * 3] = r * Math.cos(phi); pos[k * 3 + 1] = r * Math.sin(phi); pos[k * 3 + 2] = B.z + a;
+      uv[k * 2] = u; uv[k * 2 + 1] = s;
+      if (col) col.set(B.color(s, u), k * 3);
+      if (j === S) { tipC[0] += pos[k * 3] / L; tipC[1] += pos[k * 3 + 1] / L; tipC[2] += pos[k * 3 + 2] / L; }
+    }
+  }
+  const tc = (S + 1) * L; pos.set(tipC, tc * 3); uv.set([0.5, 1], tc * 2); if (col) col.set(B.color(1, 0.5), tc * 3);
+  const idx = [];
+  for (let j = 0; j < S; j++) for (let i = 0; i < L - 1; i++) { const a = j * L + i, b = a + 1, c = a + L + 1, d = a + L; idx.push(a, b, c, a, c, d); }
+  for (let i = 0; i < L - 1; i++) idx.push(S * L + i, S * L + i + 1, tc);
+  const g = new THREE.BufferGeometry();
+  g.setIndex(idx); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+  if (col) g.setAttribute('color', new THREE.BufferAttribute(col, 3));
+  g.computeVertexNormals();
+  return g;
+}
+function bladeRow(B, count, { phase = 0, filter = null } = {}) {
+  const g0 = bladeGeometry(B), list = [];
+  for (let k = 0; k < count; k++) { const ang = phase + TAU * k / count; const a = ((ang % TAU) + TAU) % TAU; if (filter && !filter(a)) continue; const g = g0.clone(); g.rotateZ(ang); list.push(g); }
+  g0.dispose(); return merge(list, 'bladeRow');
+}
+// Ring of hex bolt heads: dir '+z' | '-z' | 'radial'
+function boltRing({ count, r, z, size = 0.0065, dir = '+z', phiStart = 0, phiLen = TAU }) {
+  const list = [], h = size * 0.85;
+  for (let k = 0; k < count; k++) {
+    const ang = phiStart + phiLen * (k + 0.5) / count, g = new THREE.CylinderGeometry(size, size, h, 6, 1);
+    if (dir === 'radial') { g.rotateZ(-Math.PI / 2); g.translate(r + h / 2, 0, z); }
+    else { g.rotateX(dir === '+z' ? Math.PI / 2 : -Math.PI / 2); g.translate(r, 0, z + (dir === '+z' ? h / 2 : -h / 2)); }
+    g.rotateZ(ang); list.push(g);
+  }
+  return merge(list, 'bolts');
+}
+function tubeGeo(points, radius, segs = 48, radial = 8) {
+  const curve = new THREE.CatmullRomCurve3(points.map((p) => (p.isVector3 ? p : v3(p))), false, 'catmullrom', 0.5);
+  const g = new THREE.TubeGeometry(curve, segs, radius, radial, false); g.userData.curve = curve; return g;
+}
+function clampsAlong(curve, tubeR, n, t0 = 0.05, t1 = 0.95) {
+  const list = [], q = new THREE.Quaternion(), Z = new THREE.Vector3(0, 0, 1);
+  for (let i = 0; i < n; i++) {
+    const t = lerp(t0, t1, n === 1 ? 0.5 : i / (n - 1)), p = curve.getPointAt(t), tg = curve.getTangentAt(t);
+    const g = new THREE.TorusGeometry(tubeR * 1.35, tubeR * 0.42, 6, 14); q.setFromUnitVectors(Z, tg);
+    g.applyQuaternion(q); g.translate(p.x, p.y, p.z); list.push(g);
+  }
+  return merge(list, 'clamps');
+}
+function cylZ(r, len, seg = 24) { const g = new THREE.CylinderGeometry(r, r, len, seg, 1); g.rotateX(Math.PI / 2); return g; }
+function at(g, r, phi, z) { g.translate(r, 0, z); g.rotateZ(phi); return g; }
+// Curved decal strip conforming to a surface of revolution.
+function decalGeo({ rFn, phiC, zC, w, h, side }) {
+  const nz = 16, np = 6, pos = [], uv = [], idx = [];
+  for (let i = 0; i <= nz; i++) for (let j = 0; j <= np; j++) {
+    const z = zC - w / 2 + w * i / nz, r = rFn(z) + 0.0016, phi = phiC + (j / np - 0.5) * h / r;
+    pos.push(r * Math.cos(phi), r * Math.sin(phi), z);
+    uv.push(side < 0 ? i / nz : 1 - i / nz, side < 0 ? 1 - j / np : j / np);
+  }
+  for (let i = 0; i < nz; i++) for (let j = 0; j < np; j++) { const a = i * (np + 1) + j, b = a + np + 1, d = a + 1, c = b + 1; idx.push(a, c, b, a, d, c); }
+  const g = new THREE.BufferGeometry(); g.setIndex(idx); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2)); g.computeVertexNormals(); return g;
+}
+// Generic flanged casing profile (closed loop)
+function caseProfile({ zF, zB, rIn, thick, flanges = [], n = 10, mO = 0, mI = 1, mF = 2 }) {
+  const ro = (z) => rIn(z) + thick, out = [];
+  const fl = flanges.map((f) => ({ z0: Math.max(zB, f.z - f.w / 2), z1: Math.min(zF, f.z + f.w / 2), h: f.h })).sort((a, b) => a.z0 - b.z0);
+  let cur = zB;
+  const span = (za, zb) => { const k = Math.max(1, Math.ceil((zb - za) / (zF - zB) * n)); for (let i = 0; i <= k; i++) { const z = za + (zb - za) * i / k; out.push([ro(z), z, mO]); } };
+  for (const f of fl) {
+    if (f.z0 > cur + 1e-6) span(cur, f.z0);
+    out.push([ro(f.z0), f.z0, mF], [ro(f.z0) + f.h, f.z0, mF], [ro(f.z1) + f.h, f.z1, mF]);
+    if (f.z1 < zF - 1e-6) out.push([ro(f.z1), f.z1, mO]);
+    cur = f.z1;
+  }
+  if (cur < zF - 1e-6) span(cur, zF);
+  out[out.length - 1][2] = mF;
+  const inner = []; for (let i = 0; i <= n; i++) { const z = zF + (zB - zF) * i / n; inner.push([rIn(z), z, mI]); }
+  inner[inner.length - 1][2] = mF;
+  return dedupe([...out, ...inner]);
+}
+// Rotor drum with hanging disks (closed loop)
+function drumProfile(outer, thick, disks) {
+  const zs = outer.map((p) => p[1]), rs = outer.map((p) => p[0]), rAt = interp(zs, rs);
+  const prof = []; for (let i = outer.length - 1; i >= 0; i--) prof.push([outer[i][0], outer[i][1], 0]);
+  const zF = outer[0][1], zB = outer[outer.length - 1][1], rIn = (z) => rAt(z) - thick;
+  prof.push([rIn(zF), zF, 1]);
+  for (const d of disks.slice().sort((a, b) => b.z - a.z)) {
+    const wr = d.rim ?? 0.016, ww = d.web ?? 0.006, wb = d.boreW ?? 0.02, rb = d.bore, ri = rIn(d.z);
+    prof.push([ri, d.z + wr + 0.004, 1], [ri - 0.012, d.z + ww, 1], [rb + 0.03, d.z + ww, 1], [rb, d.z + wb, 1], [rb, d.z - wb, 1], [rb + 0.03, d.z - ww, 1], [ri - 0.012, d.z - ww, 1], [ri, d.z - wr - 0.004, 1]);
+  }
+  prof.push([rIn(zB), zB, 1]);
+  return prof;
+}
+// Heat-tint palette for hot-section metal (linear RGB)
+const HEAT_STOPS = [[0, srgb(0.74, 0.75, 0.77)], [0.25, srgb(0.86, 0.77, 0.52)], [0.45, srgb(0.72, 0.5, 0.3)], [0.62, srgb(0.48, 0.33, 0.5)], [0.8, srgb(0.33, 0.43, 0.63)], [1, srgb(0.52, 0.56, 0.62)]];
+function heatColor(t) {
+  t = clamp(t, 0, 1);
+  for (let i = 1; i < HEAT_STOPS.length; i++) if (t <= HEAT_STOPS[i][0]) { const [t0, a] = HEAT_STOPS[i - 1], [t1, b] = HEAT_STOPS[i], k = (t - t0) / (t1 - t0); return [lerp(a[0], b[0], k), lerp(a[1], b[1], k), lerp(a[2], b[2], k)]; }
+  return HEAT_STOPS[HEAT_STOPS.length - 1][1];
+}
+
+/* =====================================================================
+   7. PART REGISTRY
+   ===================================================================== */
+const parts = {}; const partList = []; const pickables = []; const groupsRoot = new THREE.Group(); scene.add(groupsRoot);
+/**
+ * A part = one inspectable component. It may consist of several pieces (e.g. left/right cowl halves),
+ * each with its own explode vector and optional hinge.
+ */
+function addPart(id, pieces, meta) {
+  const info = INFO[id];
+  const part = { id, meta: { ...meta, ...info }, pieces: [], mats: [], meshes: [], e: 0, open: 0, hover: 0, hoverT: 0, hidden: false, ghost: false, tw: null, spins: [] };
+  const cache = new Map();
+  const cloneMat = (m) => {
+    if (cache.has(m)) return cache.get(m);
+    const c = m.clone(); c.userData = { ...m.userData };
+    if (meta.clip) { if (m.userData.thin) applyClipOnly(c); else applySection(c); }
+    cache.set(m, c); part.mats.push(c); return c;
+  };
+  for (const pc of pieces) {
+    const root = new THREE.Group(); root.name = id;
+    if (pc.hinge) { root.position.set(0, pc.hinge.y, 0); pc.obj.position.y -= pc.hinge.y; }
+    root.add(pc.obj); groupsRoot.add(root);
+    const piece = { root, base: root.position.clone(), explode: v3(pc.explode || meta.explode || [0, 0, 0]), hinge: pc.hinge || null, rot: 0 };
+    part.pieces.push(piece);
+    pc.obj.traverse((o) => {
+      if (o.isMesh) {
+        o.material = Array.isArray(o.material) ? o.material.map(cloneMat) : cloneMat(o.material);
+        o.userData.part = part; o.userData.mat = o.material; part.meshes.push(o); pickables.push(o);
+      }
+      if (o.userData.spool) part.spins.push(o);
+    });
+  }
+  if (meta.anchor) { const a = v3(meta.anchor); const p0 = part.pieces[0]; part.anchor = a.sub(p0.base); }
+  parts[id] = part; partList.push(part);
+  return part;
+}
+
+/* =====================================================================
+   8. PART INFORMATION (descriptions & working principles)
+   ===================================================================== */
+const INFO = {
+  inlet: { name: 'Inlet Cowl', module: 'Nacelle', desc: 'The aerodynamic lip and duct at the very front of the nacelle. It delivers a smooth, uniform column of air to the fan at every flight condition, from a stationary take-off roll to Mach 0.85 cruise.',
+    principle: 'The contoured throat acts as a diffuser: it slows incoming air to roughly Mach 0.5–0.6 at the fan face and converts kinetic energy into static pressure (ram recovery). The polished aluminium lip is kept ice-free by hot compressor bleed air, while the inner barrel is lined with perforated acoustic panels — tiny Helmholtz resonators tuned to absorb fan tone noise.',
+    specs: [['Highlight diameter', '2.00 m'], ['Lip', 'Al-Li, bleed anti-iced'], ['Barrel', 'Perforated acoustic honeycomb'], ['Mass flow (T/O)', '≈ 480 kg/s']] },
+  fanCowl: { name: 'Fan Cowl Doors', module: 'Nacelle', desc: 'Two carbon-composite clamshell doors that enclose the fan case. They hinge from the pylon and latch along the bottom centre line.',
+    principle: 'The cowls form the smooth external flow surface of the nacelle and protect the fan-case accessories (EEC, harnesses). When opened on hold-open rods they give mechanics full access for line maintenance without removing anything.',
+    specs: [['Construction', 'Carbon/epoxy sandwich'], ['Opening angle', '≈ 58°'], ['Latches', '4 per side, pressure-relief door']] },
+  thrustReverser: { name: 'Thrust Reverser C-Ducts', module: 'Nacelle', desc: 'The rear nacelle halves. Their inner skins form the outer wall of the bypass duct, and they contain a translating-sleeve thrust reverser.',
+    principle: 'On landing the sleeve slides aft, blocker doors close off the bypass duct and cascade vanes turn the cold bypass stream forwards. Reversing ~80% of the engine\'s thrust-producing flow can contribute around a third of the stopping force on a wet runway.',
+    specs: [['Type', 'Translating cascade'], ['Actuation', '6 electro-mechanical actuators'], ['Deploy time', '≈ 2 s']] },
+  pylon: { name: 'Pylon & Engine Mounts', module: 'Nacelle', desc: 'The strut that hangs the engine from the wing. It carries the engine\'s weight, thrust and gyroscopic loads, and routes fuel, bleed air, hydraulics and electrics.',
+    principle: 'Thrust is transferred through thrust links into the forward mount on the fan frame and the aft mount on the turbine rear frame. The pylon also acts as a firewall between the engine fire zone and the wing.',
+    specs: [['Forward mount', 'Fan frame, fail-safe links'], ['Aft mount', 'Turbine rear frame'], ['Primary structure', 'Titanium / steel box']] },
+  spinner: { name: 'Spinner', module: 'Fan module', desc: 'The rotating nose cone in front of the fan hub, painted with a white spiral.',
+    principle: 'It guides air smoothly into the fan hub region and deflects ice and hailstones outward into the bypass duct, away from the core. The spiral marking lets ground crew see at a glance whether the fan is turning — a vital safety cue.',
+    specs: [['Construction', 'Composite, elastomeric tip'], ['Rotates with', 'LP spool (N1)']] },
+  fan: { name: 'Fan Rotor', module: 'Fan module', desc: 'Twenty wide-chord, swept fan blades woven from 3-D carbon fibre, each with a titanium leading-edge sheath for erosion and bird-strike protection.',
+    principle: 'The fan is a single, very large compressor stage. It gives a huge mass of air a modest pressure rise (~1.5:1). About 9 out of every 10 kg bypass the core and generate roughly 80% of take-off thrust: moving lots of air slowly is far more propulsively efficient than moving little air fast. The swept "scimitar" tips keep shock waves weak at ~430 m/s tip speed.',
+    specs: [['Diameter', '1.81 m'], ['Blades', '20, 3-D woven composite'], ['Max N1', '4,600 rpm'], ['Tip speed', '≈ 436 m/s'], ['Pull per blade (T/O)', '≈ 100 tonnes-force']] },
+  fanCase: { name: 'Fan Case & Containment', module: 'Fan module', desc: 'A carbon-composite containment case with machined aluminium flanges and an abradable rub strip directly over the blade tips.',
+    principle: 'It must stop a blade released at full power — proven by an explosive "blade-off" certification test. The abradable rub strip lets blades cut their own track, keeping the tip gap (and therefore leakage loss) as small as possible.',
+    specs: [['Construction', 'Triaxial braided carbon'], ['Tip clearance', '≈ 1.5 mm'], ['Certification', 'Blade-off containment']] },
+  eec: { name: 'EEC / FADEC', module: 'Fan module', desc: 'The dual-channel Electronic Engine Control mounted on the fan case — the engine\'s brain.',
+    principle: 'Full Authority Digital Engine Control reads ~100 sensors (speeds, temperatures, pressures) and schedules fuel flow, variable stator vanes, bleed valves and clearance control up to 50 times per second, protecting the engine from over-speed, over-temperature and surge.',
+    specs: [['Channels', '2 (A/B, cross-checked)'], ['Cooling', 'Finned, fan-air'], ['Update rate', '≈ 50 Hz']] },
+  fanFrame: { name: 'Fan Frame, OGVs & Splitter', module: 'Fan module', desc: 'The stationary structure behind the fan: 36 outlet guide vanes, the splitter nose, booster inlet guide vanes and the core struts.',
+    principle: 'The OGVs remove the swirl the fan puts into the bypass air, turning it into useful axial momentum and pressure. The splitter divides the flow — 9.8 parts around the core, 1 part into it — and the frame carries the No.1–3 bearing loads and the forward engine mount.',
+    specs: [['OGVs', '36, aluminium'], ['Bypass ratio', '9.8 : 1'], ['Core struts', '10']] },
+  coreCowl: { name: 'Core Cowl', module: 'Core module', desc: 'Two hinged composite halves forming the inner wall of the bypass duct and the fire-zone enclosure around the core.',
+    principle: 'The smooth cowl keeps the fast bypass stream attached all the way to the fan nozzle. Inside, cool ventilation air flows through the core compartment, and fire detection loops and extinguishing discharge nozzles protect the externals.',
+    specs: [['Construction', 'Carbon/BMI composite'], ['Function', 'Bypass inner wall, fire zone']] },
+  booster: { name: 'Low-Pressure Compressor (Booster)', module: 'Core module', desc: 'Three compressor stages that spin with the fan on the LP spool, sitting just behind the splitter.',
+    principle: 'The booster "supercharges" the core air (≈1.4:1) before it reaches the HPC. Because it turns at fan speed its blades are short and wide. Variable bleed valves dump air into the bypass duct at low power, keeping the booster away from stall.',
+    specs: [['Stages', '3'], ['Pressure ratio', '≈ 1.4 : 1'], ['Speed', 'N1, 4,600 rpm max']] },
+  hpc: { name: 'High-Pressure Compressor Rotor', module: 'Core module', desc: 'A nine-stage axial compressor drum. Front stages are titanium blisks (blades and disc machined as one piece); rear stages are nickel alloy.',
+    principle: 'Each stage is a rotor that adds energy to the air followed by a stator that converts the swirl into pressure. Nine stages squeeze the air about 19 times, so the whole engine reaches ~40:1. Compression alone heats the air to around 650 °C before any fuel is burned.',
+    specs: [['Stages', '9'], ['Pressure ratio', '≈ 19 : 1'], ['Max N2', '16,800 rpm'], ['Exit temp (T3)', '≈ 650 °C']] },
+  hpcCase: { name: 'HPC Case & Variable Stators', module: 'Core module', desc: 'The horizontally split compressor case carrying all stator rows. The inlet guide vanes and first three stator rows can rotate, driven by unison rings and an actuator.',
+    principle: 'The FADEC turns the variable stator vanes to keep each blade row at the ideal angle of attack as speed changes — preventing stall and surge at low power and maximising efficiency at cruise. Bleed ports tap compressed air for cabin pressurisation and anti-icing.',
+    specs: [['Split', 'Horizontal, bolted flanges'], ['Variable rows', 'IGV + S1–S3'], ['Bleed ports', 'Stage 4 and 7']] },
+  coreCase: { name: 'Diffuser & Combustor Case', module: 'Hot section', desc: 'The pressure vessel surrounding the combustor, from the compressor exit to the high-pressure turbine shroud.',
+    principle: 'At take-off this case contains air at about 40 bar. The diffuser slows the air leaving the compressor so a flame can be held stably, and the case supports the HPT shrouds, whose clearance is actively controlled by cooling-air rings.',
+    specs: [['Max pressure', '≈ 40 bar'], ['Material', 'Inconel 718'], ['Borescope ports', '4']] },
+  combustor: { name: 'Annular Combustor', module: 'Hot section', desc: 'A single ring-shaped combustion chamber with 20 swirl cups in its dome. The double-walled liner is perforated by thousands of effusion cooling holes.',
+    principle: 'This is where chemical energy becomes heat at almost constant pressure — the "bang" in suck-squeeze-bang-blow. Swirlers create a recirculation zone that anchors the flame at ~2,000 °C. Dilution holes then mix in air to cool the gas to ~1,600 °C before the turbine, while a cool air film protects the liner walls.',
+    specs: [['Type', 'Rich-burn / quick-quench / lean-burn'], ['Fuel nozzles', '20'], ['Flame temp', '≈ 2,000 °C'], ['Exit temp (T4)', '≈ 1,600 °C']] },
+  fuel: { name: 'Fuel Manifold & Nozzles', module: 'Hot section', desc: 'Dual fuel manifolds around the combustor case feeding 20 fuel-injector nozzles, plus two igniter plugs.',
+    principle: 'Pilot and main fuel circuits are staged by the FADEC: pilots alone for stable light-off and idle, mains added for power. Each nozzle atomises fuel into a fine spray inside an air swirler for clean, complete combustion.',
+    specs: [['Nozzles', '20, dual-orifice'], ['Igniters', '2'], ['Fuel flow (T/O)', '≈ 4,600 kg/h']] },
+  hpt: { name: 'High-Pressure Turbine', module: 'Turbine', desc: 'Two stages of single-crystal nickel superalloy blades with ceramic thermal-barrier coating, each preceded by a ring of nozzle guide vanes.',
+    principle: 'The NGVs accelerate the hot gas and aim it at the blades, which extract energy to drive the HPC through the HP shaft. The gas is hotter than the metal\'s melting point: each blade survives because compressor air flows through internal cooling passages and out through film-cooling holes, wrapping it in a protective blanket.',
+    specs: [['Stages', '2'], ['Inlet gas temp', '≈ 1,600 °C'], ['Blade alloy', 'Single-crystal Ni + TBC'], ['Power per blade', '≈ 400 kW']] },
+  lpt: { name: 'Low-Pressure Turbine Rotor', module: 'Turbine', desc: 'Five stages of long, slender, shrouded blades on the LP spool.',
+    principle: 'The LPT extracts most of the remaining gas energy to drive the fan and booster through the long inner LP shaft. Because the fan must turn slowly, the LPT needs many stages to absorb the power at a low speed. Interlocking tip shrouds damp vibration and seal over the blade tips.',
+    specs: [['Stages', '5'], ['Exit temp (EGT)', '≈ 640 °C'], ['Drives', 'Fan + booster (N1)']] },
+  lptCase: { name: 'LPT Case & Clearance Control', module: 'Turbine', desc: 'The conical LPT case carrying all five vane rows, wrapped by active-clearance-control spray manifolds and EGT probes.',
+    principle: 'In cruise the FADEC sprays cool fan air through the manifold tubes onto the case, shrinking it slightly so blade-tip gaps close up. Tighter tips leak less gas — worth around 1% in fuel burn. The thermocouple ring reports Exhaust Gas Temperature to the cockpit.',
+    specs: [['Vane rows', '5'], ['ACC rings', '7'], ['EGT probes', '8']] },
+  trf: { name: 'Turbine Rear Frame', module: 'Exhaust', desc: 'A stiff ring with 14 aerodynamic struts behind the LPT, housing the No.5 bearing.',
+    principle: 'The struts straighten any remaining swirl in the exhaust so all momentum is axial, support the rear of the LP shaft, and provide the aft engine-mount lugs that carry loads into the pylon.',
+    specs: [['Struts', '14'], ['Bearing', 'No.5 roller'], ['Mount', 'Aft engine mount']] },
+  exhaust: { name: 'Core Exhaust Nozzle', module: 'Exhaust', desc: 'The converging heat-tinted sleeve that forms the final core gas path.',
+    principle: 'The nozzle turns remaining pressure into velocity, accelerating the hot core jet to around 400 m/s. Thrust is simply momentum: mass flow × (exit velocity − flight speed).',
+    specs: [['Material', 'Titanium / Inconel 625'], ['Jet velocity (T/O)', '≈ 400 m/s']] },
+  plug: { name: 'Exhaust Plug', module: 'Exhaust', desc: 'The centre-body cone that closes the core gas path behind the turbine.',
+    principle: 'The plug lets the annular core jet expand smoothly instead of separating behind the turbine hub, and its perforated skin hides acoustic cells that damp combustion and turbine noise.',
+    specs: [['Construction', 'Perforated Inconel, acoustic'], ['Length', '0.92 m']] },
+  shafts: { name: 'LP & HP Shafts + Bearings', module: 'Systems', desc: 'Two concentric shafts and five main bearings. The slender inner LP shaft runs the full length of the engine; the hollow HP shaft surrounds it in the core.',
+    principle: 'This is the two-spool layout: LP turbine ↔ fan & booster (N1) and HP turbine ↔ HP compressor (N2). Letting each spool turn at its own ideal speed is what makes a high-bypass engine efficient. Ball bearings take axial thrust; roller bearings take radial loads.',
+    specs: [['Spools', '2, co-rotating'], ['LP shaft', '≈ 3.3 m, high-strength steel'], ['Main bearings', '5 (2 sumps)']] },
+  agb: { name: 'Accessory Gearbox', module: 'Systems', desc: 'The curved, core-mounted gearbox and the accessories bolted to it: air-turbine starter, generator, fuel pump & metering unit, oil and hydraulic pumps.',
+    principle: 'A radial tower shaft takes power off the HP spool. During start the process reverses: the air-turbine starter spins N2 through the gearbox until the engine can sustain itself. In flight, the gearbox powers the fuel and oil pumps, hydraulics and ~90 kVA of electrical power.',
+    specs: [['Drive', 'Radial shaft from N2'], ['Generator', '90 kVA IDG'], ['Starter', 'Pneumatic air turbine']] },
+  externals: { name: 'Bleed Ducts, Harnesses & Oil Lines', module: 'Systems', desc: 'The "plumbing" of the engine: compressor bleed manifolds and ducts, braided electrical harnesses with P-clamps, and oil supply/scavenge lines.',
+    principle: 'Bleed air at stages 4 and 7 is ducted to the pylon for cabin pressurisation and anti-icing. Harnesses carry sensor and control signals to the FADEC, and oil lines feed and scavenge the bearing sumps.',
+    specs: [['Bleed stages', '4 (LP) and 7 (HP)'], ['Harnesses', 'Braided, fire-resistant'], ['Oil system', 'Dry sump, pressure-fed']] },
+};
+const MODULE_COLORS = { 'Nacelle': '#9aa6b5', 'Fan module': '#4b5cff', 'Core module': '#18a0d6', 'Hot section': '#ff6a3d', 'Turbine': '#e0a300', 'Exhaust': '#b45bff', 'Systems': '#18b47b' };
+
+/* =====================================================================
+   9. ENGINE GEOMETRY — modules (all dimensions in metres; axis = +Z forward)
+   ===================================================================== */
+const SPOOL = { n1: 0, n2: 0 };
+function spinGroup(spool) { const g = new THREE.Group(); g.userData.spool = spool; return g; }
+
+// ---- Nacelle ---------------------------------------------------------------------------------
+function buildNacelle() {
+  // Inlet cowl
+  const lip = []; for (let i = 0; i <= 14; i++) { const a = rad(-15 + 210 * i / 14); lip.push([0.99 + 0.052 * Math.cos(a), 2.325 + 0.075 * Math.sin(a), 1]); }
+  const inletProf = [[1.155, 1.70, 0], [1.153, 1.84, 0], [1.142, 1.98, 0], [1.118, 2.11, 0], [1.085, 2.22, 1], ...lip, [0.928, 2.25, 2], [0.918, 2.15, 2], [0.919, 2.03, 2], [0.928, 1.89, 2], [0.938, 1.77, 3], [0.942, 1.70, 3]];
+  const inlet = new THREE.Group();
+  inlet.add(mesh(lathe(inletProf, { segments: 160 }), [M.paint, M.lip, M.liner, M.steel]));
+  inlet.add(mesh(lathe([[1.1562, 1.735], [1.1562, 1.775]], { closed: false, segments: 160 }), M.accent));
+  inlet.add(mesh(lathe([[1.1561, 1.784], [1.1561, 1.791]], { closed: false, segments: 160 }), M.pin));
+  inlet.add(mesh(boltRing({ count: 48, r: 1.05, z: 1.70, dir: '-z' }), M.bolt));
+  addPart('inlet', [{ obj: inlet }], { stage: 2, explode: [0, 0, 3.6], clip: true, shell: true, anchor: [-0.74, 0.74, 2.15], label: true });
+
+  // Fan cowl doors (clamshell halves hinged at the pylon)
+  const cowlProf = [[1.135, 0.55, 0], [1.148, 1.0, 0], [1.155, 1.45, 0], [1.155, 1.70, 1], [1.05, 1.70, 1], [1.05, 0.55, 1]];
+  const cowlR = interp([1.70, 1.45, 1.0, 0.55], [1.155, 1.155, 1.148, 1.135]);
+  const gap = 0.004;
+  const mkDoor = (left) => {
+    const g = new THREE.Group();
+    g.add(shell(cowlProf, left ? Math.PI / 2 + gap : -Math.PI / 2 + gap, Math.PI - 2 * gap, [M.paint, M.cowlInner], { segments: 80, capMat: 1 }));
+    g.add(mesh(decalGeo({ rFn: cowlR, phiC: left ? Math.PI - 0.15 : 0.15, zC: 1.1, w: 0.78, h: 0.195, side: left ? -1 : 1 }), M.logo, { cast: false }));
+    g.add(mesh(decalGeo({ rFn: cowlR, phiC: left ? Math.PI / 2 + 0.22 : Math.PI / 2 - 0.22, zC: 1.12, w: 0.2, h: 0.05, side: left ? -1 : 1 }), M.nostep, { cast: false }));
+    // hinges & latches
+    const hw = []; for (let k = 0; k < 4; k++) { hw.push(at(cylZ(0.012, 0.07, 10), 1.158, Math.PI / 2 + (left ? 0.035 : -0.035), 0.65 + k * 0.32)); }
+    g.add(mesh(merge(hw), M.steelDark));
+    const la = []; for (let k = 0; k < 4; k++) { const b = new THREE.BoxGeometry(0.012, 0.03, 0.08); la.push(at(b, 1.152, -Math.PI / 2 + (left ? -0.02 : 0.02), 0.7 + k * 0.28)); }
+    g.add(mesh(merge(la), M.steelDark));
+    return g;
+  };
+  addPart('fanCowl', [
+    { obj: mkDoor(true), hinge: { y: 1.165, sign: -1, angle: CONFIG.doorAngle }, explode: [-1.9, 0.3, 0.8] },
+    { obj: mkDoor(false), hinge: { y: 1.165, sign: 1, angle: CONFIG.doorAngle }, explode: [1.9, 0.3, 0.8] },
+  ], { stage: 2, open: true, clip: true, shell: true, anchor: [-0.81, 0.82, 1.1], label: true });
+
+  // Thrust reverser C-ducts
+  const trProf = [[0.935, -0.45, 0], [1.0, -0.2, 0], [1.07, 0.1, 0], [1.115, 0.35, 0], [1.135, 0.55, 2], [0.96, 0.55, 1], [0.95, 0.3, 1], [0.93, 0.0, 1], [0.905, -0.25, 1], [0.89, -0.42, 1], [0.905, -0.452, 0]];
+  const mkTR = (left) => {
+    const g = new THREE.Group();
+    g.add(shell(trProf, left ? Math.PI / 2 + gap : -Math.PI / 2 + gap, Math.PI - 2 * gap, [M.paint, M.cowlInner, M.steel], { segments: 80, capMat: 2 }));
+    // translating-sleeve seam and actuator fairings
+    g.add(mesh(lathe([[1.1295, 0.32], [1.1305, 0.335]], { closed: false, segments: 80, phiStart: left ? Math.PI / 2 + gap : -Math.PI / 2 + gap, phiLength: Math.PI - 2 * gap }), M.pin));
+    return g;
+  };
+  addPart('thrustReverser', [
+    { obj: mkTR(true), hinge: { y: 1.14, sign: -1, angle: CONFIG.trAngle }, explode: [-2.3, 0.1, -0.5] },
+    { obj: mkTR(false), hinge: { y: 1.14, sign: 1, angle: CONFIG.trAngle }, explode: [2.3, 0.1, -0.5] },
+  ], { stage: 2, open: true, clip: true, shell: true, anchor: [-0.75, 0.72, 0.05], label: true });
+
+  // Pylon (extruded side profile, bevelled)
+  const sh = new THREE.Shape();
+  const pts = [[1.05, 1.12], [0.82, 1.38], [0.48, 1.70], [0.05, 1.86], [-2.3, 1.86], [-2.3, 1.60], [-2.05, 0.80], [-1.75, 0.63], [-1.3, 0.67], [-0.62, 0.95], [-0.42, 1.08], [0.0, 1.12]];
+  sh.moveTo(-pts[0][0], pts[0][1]); for (let i = 1; i < pts.length; i++) sh.lineTo(-pts[i][0], pts[i][1]); sh.closePath();
+  let pg = new THREE.ExtrudeGeometry(sh, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.02, bevelSize: 0.02, bevelSegments: 3, curveSegments: 4 });
+  pg.rotateY(Math.PI / 2); pg.translate(-0.1, 0, 0);
+  pg.deleteAttribute('uv'); pg = mergeVertices(pg); pg.computeVertexNormals();
+  const uvs = new Float32Array(pg.attributes.position.count * 2); for (let i = 0; i < pg.attributes.position.count; i++) { uvs[i * 2] = pg.attributes.position.getZ(i); uvs[i * 2 + 1] = pg.attributes.position.getY(i); } pg.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
+  const pylon = new THREE.Group(); pylon.add(mesh(pg, M.paintGray));
+  // aft heat shield & mount lugs
+  const hs = new THREE.BoxGeometry(0.24, 0.025, 0.7); hs.rotateX(-0.25); hs.translate(0, 0.66, -1.62);
+  pylon.add(mesh(hs, M.tubeHot));
+  addPart('pylon', [{ obj: pylon }], { stage: 2, explode: [2.0, 1.15, -0.4], anchor: [0, 1.86, -0.9], label: true });
+}
+
+// ---- Fan module ------------------------------------------------------------------------------
+function buildFanModule() {
+  // Spinner
+  const sp = [[0, 1.60, 0], [0.315, 1.60, 0], [0.316, 1.635, 0]];
+  for (let i = 1; i <= 16; i++) { const t = i / 16; sp.push([i === 16 ? 0 : 0.316 * Math.pow(1 - t, 0.9) * (1 + 0.25 * t * (1 - t)), 1.635 + 0.445 * t, 0]); }
+  const spin = spinGroup('n1');
+  spin.add(mesh(lathe(sp, { closed: false, segments: 96, uvNormalize: true }), M.spinner));
+  spin.add(mesh(boltRing({ count: 12, r: 0.301, z: 1.66, dir: 'radial', size: 0.006 }), M.bolt));
+  addPart('spinner', [{ obj: spin }], { stage: 3, explode: [0, 0, 3.1], anchor: [-0.13, 0.13, 1.92], label: true });
+
+  // Fan rotor
+  const fan = spinGroup('n1');
+  fan.add(mesh(lathe([[0.315, 1.37], [0.315, 1.62], [0.28, 1.625], [0.24, 1.56], [0.14, 1.52], [0.10, 1.52], [0.10, 1.44], [0.14, 1.44], [0.24, 1.40], [0.28, 1.37]], { segments: 96 }), M.titanium));
+  fan.add(mesh(bladeRow({
+    rHub: 0.302, rTip: 0.903, z: 1.515, nSpan: 22, nChord: 16,
+    chord: (s) => 0.205 + 0.25 * Math.pow(s, 0.85) - 0.07 * Math.pow(s, 4),
+    stagger: (s) => rad(26 + 34 * Math.pow(s, 0.9)), camber: (s) => 0.075 - 0.05 * s,
+    thick: (s) => 0.105 - 0.078 * Math.pow(s, 0.7), sweep: (s) => 0.03 * s - 0.085 * s * s, lean: (s) => 0.045 * s * s,
+  }, 20), M.fanBlade));
+  addPart('fan', [{ obj: fan }], { stage: 3, explode: [0, 0, 2.5], anchor: [-0.47, 0.47, 1.5], label: true });
+
+  // Fan case
+  const fcProf = [[0.968, 0.72, 1], [1.0, 0.72, 1], [1.0, 0.76, 0], [0.975, 0.77, 0], [0.975, 0.95, 1], [0.995, 0.955, 1], [0.995, 1.0, 0], [0.975, 1.005, 0], [0.975, 1.28, 1], [0.998, 1.285, 1], [0.998, 1.34, 0], [0.978, 1.345, 0], [0.978, 1.66, 1], [1.0, 1.665, 1], [1.0, 1.72, 1], [0.935, 1.72, 2], [0.917, 1.64, 2], [0.915, 1.32, 1], [0.93, 1.22, 1], [0.95, 1.0, 1], [0.95, 0.72, 1]];
+  const fc = new THREE.Group();
+  fc.add(mesh(lathe(fcProf, { segments: 160 }), [M.carbon, M.steel, M.abradable]));
+  fc.add(mesh(merge([boltRing({ count: 72, r: 0.985, z: 1.72, dir: '+z' }), boltRing({ count: 72, r: 0.985, z: 0.72, dir: '-z' })]), M.bolt));
+  // fan-case harness with P-clamps
+  const hp = []; for (let i = 0; i <= 24; i++) { const a = rad(-30 + 230 * i / 24); hp.push(P(0.988, a, 0.865 + 0.01 * Math.sin(i))); }
+  const hg = tubeGeo(hp, 0.008, 120, 8); fc.add(mesh(hg, M.harness)); fc.add(mesh(clampsAlong(hg.userData.curve, 0.008, 14), M.steel));
+  addPart('fanCase', [{ obj: fc }], { stage: 4, explode: [0, 0, 1.8], clip: true, shell: true, anchor: [-0.7, 0.7, 1.15], label: true });
+
+  // EEC on the fan case
+  const eec = new THREE.Group(), phiE = -0.6;
+  const eecIn = new THREE.Group(); eecIn.rotation.z = phiE; eec.add(eecIn);
+  const body = new RoundedBoxGeometry(0.05, 0.2, 0.3, 3, 0.012); body.translate(1.0, 0, 1.12); eecIn.add(mesh(body, M.eec));
+  const fins = []; for (let k = 0; k < 9; k++) { const f = new THREE.BoxGeometry(0.018, 0.004, 0.26); f.translate(1.032, -0.08 + k * 0.02, 1.12); fins.push(f); } eecIn.add(mesh(merge(fins), M.eec));
+  const con = []; for (let k = 0; k < 3; k++) { const c = cylZ(0.016, 0.03, 16); c.translate(1.0, -0.06 + k * 0.06, 1.285); con.push(c); } eecIn.add(mesh(merge(con), M.cad));
+  const eh = tubeGeo([[1.0, 0, 1.30], [1.0, 0.0, 1.34], [0.99, 0.1, 1.2], [0.988, 0.25, 0.9]], 0.007, 40, 6); eecIn.add(mesh(eh, M.harness));
+  addPart('eec', [{ obj: eec }], { stage: 4, explode: [0, 0, 1.8], anchor: [0.83, -0.56, 1.14], label: false });
+
+  // Fan frame: splitter / booster case, OGVs, IGVs, core struts, hub wall, bearing support
+  const ff = new THREE.Group();
+  const spl = [[0.64, 0.62, 0], [0.64, 0.90, 0], [0.63, 1.05, 0], [0.60, 1.18, 1], [0.575, 1.235, 1], [0.556, 1.243, 1], [0.545, 1.226, 2], [0.535, 1.12, 2], [0.525, 1.00, 2], [0.51, 0.82, 2], [0.475, 0.71, 2], [0.43, 0.64, 2], [0.42, 0.62, 2]];
+  ff.add(mesh(lathe(spl, { segments: 128 }), [M.composite, M.titanium, M.steel]));
+  ff.add(mesh(lathe([[0.275, 0.58], [0.31, 0.64], [0.36, 0.72], [0.387, 0.80], [0.367, 0.80], [0.34, 0.72], [0.29, 0.64], [0.255, 0.58]], { segments: 96 }), M.steel));
+  ff.add(mesh(lathe([[0.30, 0.655], [0.12, 0.588], [0.12, 0.566], [0.30, 0.633]], { segments: 64 }), M.steelDark));
+  ff.add(mesh(bladeRow({ rHub: 0.632, rTip: 0.955, z: 0.99, nSpan: 6, nChord: 8, chord: () => 0.13, stagger: () => rad(-8), camber: () => -0.06, thick: () => 0.08 }, 36), M.ogv));
+  ff.add(mesh(bladeRow({ rHub: 0.33, rTip: 0.55, z: 1.17, nSpan: 4, nChord: 6, chord: () => 0.05, stagger: () => rad(-5), camber: () => -0.03, thick: () => 0.1 }, 40), M.bladeSteel));
+  ff.add(mesh(bladeRow({ rHub: 0.29, rTip: 0.47, z: 0.69, nSpan: 4, nChord: 8, chord: () => 0.14, stagger: () => 0, camber: () => 0, thick: () => 0.18 }, 10, { phase: -Math.PI / 2 }), M.strut));
+  ff.add(mesh(boltRing({ count: 60, r: 0.63, z: 0.62, dir: '-z' }), M.bolt));
+  addPart('fanFrame', [{ obj: ff }], { stage: 4, explode: [0, 0, 1.35], clip: true, anchor: [-0.56, 0.56, 0.99], label: true, down: true });
+}
+
+// ---- Compressors -----------------------------------------------------------------------------
+const hpcTip = (z) => lerp(0.392, 0.336, (0.56 - z) / 0.86);
+const hpcHub = (z) => lerp(0.270, 0.296, (0.56 - z) / 0.86);
+function buildCompressors() {
+  // Booster (LPC)
+  const bo = new THREE.Group(), boSpin = spinGroup('n1'); bo.add(boSpin);
+  const boOuter = [[0.315, 1.37], [0.34, 1.24], [0.36, 1.13], [0.365, 1.05], [0.375, 0.93], [0.385, 0.79]];
+  boSpin.add(mesh(lathe(drumProfile(boOuter, 0.018, [{ z: 1.09, bore: 0.19 }, { z: 0.98, bore: 0.19 }, { z: 0.87, bore: 0.19 }]), { segments: 96 }), [M.titanium, M.disk]));
+  const boWall = interp([1.226, 1.12, 1.00, 0.82], [0.545, 0.535, 0.525, 0.51]);
+  const boHub = interp(boOuter.map((p) => p[1]), boOuter.map((p) => p[0]));
+  const boRot = [], boSta = [];
+  [1.09, 0.98, 0.87].forEach((z, k) => {
+    boRot.push(bladeRow({ rHub: boHub(z) - 0.004, rTip: boWall(z) - 0.006, z, nSpan: 5, nChord: 7, chord: () => 0.062, stagger: (s) => rad(38 + 16 * s), camber: () => 0.07, thick: () => 0.08 }, [64, 70, 76][k]));
+    const zs = z - 0.055;
+    boSta.push(bladeRow({ rHub: boHub(zs) + 0.004, rTip: boWall(zs) + 0.004, z: zs, nSpan: 4, nChord: 7, chord: () => 0.05, stagger: () => rad(-32), camber: () => -0.07, thick: () => 0.08 }, [80, 84, 90][k]));
+  });
+  boSpin.add(mesh(merge(boRot), M.bladeTi));
+  bo.add(mesh(merge(boSta), M.bladeSteel));
+  addPart('booster', [{ obj: bo }], { stage: 5, explode: [0, 0, 0.5], anchor: [-0.33, 0.33, 0.98], label: true, down: true });
+
+  // HPC rotor
+  const hpc = spinGroup('n2'), hpcRoot = new THREE.Group(); hpcRoot.add(hpc);
+  const rz = [], disks = []; for (let k = 0; k < 9; k++) { rz.push(0.50 - 0.088 * k); disks.push({ z: 0.50 - 0.088 * k, bore: 0.112, rim: 0.016 }); }
+  const outer = []; for (let i = 0; i <= 10; i++) { const z = 0.585 - 0.885 * i / 10; outer.push([hpcHub(z), z]); }
+  hpc.add(mesh(lathe(drumProfile(outer, 0.016, disks), { segments: 96 }), [M.titanium, M.disk]));
+  const rot = [];
+  const rc = [30, 34, 38, 44, 50, 56, 60, 64, 68];
+  rz.forEach((z, k) => {
+    const ch = lerp(0.062, 0.036, k / 8);
+    rot.push(bladeRow({ rHub: hpcHub(z) - 0.004, rTip: hpcTip(z) - 0.005, z, nSpan: 4, nChord: 6, chord: () => ch, stagger: (s) => rad(38 + 14 * s), camber: () => 0.065, thick: () => 0.075 }, rc[k]));
+  });
+  hpc.add(mesh(merge(rot.slice(0, 5)), M.bladeTi));
+  hpc.add(mesh(merge(rot.slice(5)), M.bladeSteel));
+  addPart('hpc', [{ obj: hpcRoot }], { stage: 9, explode: [0, 0, 0.15], anchor: [-0.235, 0.235, 0.12], label: true, down: true });
+
+  // HPC case — horizontally split halves with stators, VSV hardware, split flanges
+  const rIn = (z) => hpcTip(z) + 0.006, thick = 0.024, ro = (z) => rIn(z) + thick;
+  const cProf = caseProfile({ zF: 0.585, zB: -0.305, rIn, thick, flanges: [{ z: 0.578, w: 0.014, h: 0.036 }, { z: 0.13, w: 0.022, h: 0.03 }, { z: -0.298, w: 0.014, h: 0.036 }], n: 10 });
+  const sc = [38, 42, 48, 54, 60, 64, 68, 72, 76];
+  const vsvZ = [0.555, 0.456, 0.368, 0.280], vsvN = [38, 38, 42, 48];
+  const mkHalf = (upper) => {
+    const g = new THREE.Group(), g0 = upper ? 0.002 : Math.PI + 0.002, gl = Math.PI - 0.004;
+    const filter = (a) => upper ? (a > 0.01 && a < Math.PI - 0.01) : (a > Math.PI + 0.01 && a < TAU - 0.01);
+    g.add(shell(cProf, g0, gl, [M.steel, M.steelDark, M.steel], { segments: 72, capMat: 2 }));
+    const st = [];
+    st.push(bladeRow({ rHub: hpcHub(0.555) + 0.003, rTip: hpcTip(0.555) + 0.006, z: 0.555, nSpan: 4, nChord: 6, chord: () => 0.05, stagger: () => rad(-8), camber: () => -0.04, thick: () => 0.09 }, 38, { filter }));
+    rz.forEach((z, k) => { const zs = z - 0.044, ch = lerp(0.055, 0.034, k / 8); st.push(bladeRow({ rHub: hpcHub(zs) + 0.003, rTip: hpcTip(zs) + 0.006, z: zs, nSpan: 4, nChord: 6, chord: () => ch, stagger: () => rad(-30 - k), camber: () => -0.06, thick: () => 0.075 }, sc[k], { filter })); });
+    g.add(mesh(merge(st), M.bladeSteel));
+    // inner stator shrouds
+    const shr = []; rz.forEach((z) => { const zs = z - 0.044, r = hpcHub(zs); shr.push(partialSolid([[r - 0.006, zs - 0.014], [r + 0.003, zs - 0.014], [r + 0.003, zs + 0.014], [r - 0.006, zs + 0.014]], g0, gl, 48)); });
+    g.add(mesh(merge(shr), M.steelDark));
+    // VSV: spindles, levers, unison rings
+    const sp = [], lv = [], rings = [];
+    vsvZ.forEach((z, k) => {
+      const n = vsvN[k], R = ro(z);
+      for (let i = 0; i < n; i++) { const a = TAU * (i + 0.5) / n; if (!filter(a)) continue; sp.push(at(new THREE.CylinderGeometry(0.0045, 0.0045, 0.008, 8).rotateZ(-Math.PI / 2), R + 0.004, a, z)); lv.push(at(new THREE.BoxGeometry(0.003, 0.006, 0.03), R + 0.009, a, z + 0.014)); }
+      const tg = new THREE.TorusGeometry(R + 0.012, 0.0045, 6, 64, Math.PI - 0.01); tg.translate(0, 0, z + 0.03); tg.rotateZ(upper ? 0.005 : Math.PI + 0.005); rings.push(tg);
+    });
+    g.add(mesh(merge(sp), M.bolt)); g.add(mesh(merge(lv), M.steelDark)); g.add(mesh(merge(rings), M.steel));
+    // horizontal split flanges + bolts
+    const fb = [];
+    for (const [a0, isStart] of [[g0, true], [g0 + gl - 0.035, false]]) {
+      const finProf = [[ro(-0.29) - 0.002, -0.29], [ro(-0.29) + 0.026, -0.29], [ro(0.575) + 0.026, 0.575], [ro(0.575) - 0.002, 0.575]];
+      g.add(mesh(partialSolid(finProf, a0, 0.035, 2), M.steel));
+      const face = isStart ? a0 + 0.035 : a0, sgn = isStart ? 1 : -1;
+      for (let i = 0; i < 16; i++) { const z = -0.26 + 0.83 * i / 15, r = ro(z) + 0.014; const b = new THREE.CylinderGeometry(0.0055, 0.0055, 0.006, 6); b.translate(r, 0.003 * sgn, z); b.rotateZ(face); fb.push(b); }
+    }
+    g.add(mesh(merge(fb), M.bolt));
+    g.add(mesh(merge([boltRing({ count: 30, r: ro(0.578) + 0.022, z: 0.585, dir: '+z', phiStart: g0, phiLen: gl }), boltRing({ count: 28, r: ro(0.13) + 0.016, z: 0.141, dir: '+z', phiStart: g0, phiLen: gl }), boltRing({ count: 28, r: ro(-0.298) + 0.022, z: -0.305, dir: '-z', phiStart: g0, phiLen: gl })]), M.bolt));
+    if (upper) {
+      // VSV actuator & bellcrank
+      const a = rad(28), R = 0.462;
+      g.add(mesh(at(cylZ(0.022, 0.24, 20), R, a, 0.30), M.accessory));
+      g.add(mesh(at(cylZ(0.009, 0.12, 12), R, a, 0.47), M.chrome));
+      g.add(mesh(at(cylZ(0.006, 0.36, 8), 0.442, rad(16), 0.40), M.steelDark));
+      const arms = []; vsvZ.forEach((z) => { const b = new THREE.BoxGeometry(0.006, 0.05, 0.008); b.translate(0, 0.0, 0); arms.push(at(b, ro(z) + 0.02, rad(18), z + 0.03)); }); g.add(mesh(merge(arms), M.steelDark));
+    }
+    return g;
+  };
+  addPart('hpcCase', [{ obj: mkHalf(true), explode: [0, 0.78, 0] }, { obj: mkHalf(false), explode: [0, -0.78, 0] }], { stage: 9, clip: true, shell: true, anchor: [-0.3, 0.3, 0.02], label: true });
+}
+
+// ---- Hot section -----------------------------------------------------------------------------
+let flameMat = null;
+function buildHotSection() {
+  // Diffuser & combustor case (+ HPT shroud, ACC ring, borescope bosses)
+  const cc = new THREE.Group();
+  const ccIn = interp([-0.29, -0.34, -0.40, -0.48, -0.70, -0.80, -0.86, -0.99, -1.035], [0.36, 0.385, 0.44, 0.452, 0.452, 0.437, 0.41, 0.40, 0.40]);
+  const ccProf = caseProfile({ zF: -0.29, zB: -1.035, rIn: ccIn, thick: 0.018, flanges: [{ z: -0.297, w: 0.014, h: 0.03 }, { z: -0.86, w: 0.016, h: 0.024 }, { z: -1.028, w: 0.014, h: 0.03 }], n: 16 });
+  const heatCase = (r, z, phi) => { const n = N2(phi * 3, z * 9, 256, 256); return heatColor(0.08 + 0.32 * smooth(-0.35, -0.95, z) + 0.12 * n); };
+  cc.add(mesh(lathe(ccProf, { segments: 128, color: heatCase }), [M.heat, M.heat, M.steel]));
+  cc.add(mesh(lathe([[0.296, -0.29], [0.29, -0.34], [0.25, -0.40], [0.235, -0.55], [0.24, -0.75], [0.275, -0.83], [0.285, -0.85], [0.273, -0.85], [0.263, -0.83], [0.228, -0.75], [0.223, -0.55], [0.238, -0.40], [0.278, -0.34], [0.284, -0.29]], { segments: 96 }), M.steelDark));
+  cc.add(mesh(lathe([[0.381, -0.862], [0.395, -0.862], [0.395, -1.012], [0.384, -1.012], [0.384, -0.94], [0.381, -0.935]], { segments: 96 }), M.abradable));
+  cc.add(mesh(merge([boltRing({ count: 40, r: 0.395, z: -0.29, dir: '+z' }), boltRing({ count: 40, r: 0.447, z: -0.868, dir: '-z' }), boltRing({ count: 44, r: 0.428, z: -1.035, dir: '-z' })]), M.bolt));
+  cc.add(mesh(merge([new THREE.TorusGeometry(0.432, 0.008, 8, 128).translate(0, 0, -0.93), new THREE.TorusGeometry(0.432, 0.008, 8, 128).translate(0, 0, -0.97)]), M.tube));
+  const bs = []; for (const [a, z] of [[rad(150), -0.62], [rad(30), -0.62], [rad(210), -0.95], [rad(330), -0.95]]) { const R = ccIn(z) + 0.018; bs.push(at(new THREE.CylinderGeometry(0.016, 0.018, 0.03, 12).rotateZ(-Math.PI / 2), R + 0.015, a, z)); bs.push(at(new THREE.CylinderGeometry(0.011, 0.011, 0.012, 6).rotateZ(-Math.PI / 2), R + 0.036, a, z)); }
+  cc.add(mesh(merge(bs), M.steel));
+  addPart('coreCase', [{ obj: cc }], { clip: true, shell: true, anchor: [-0.33, 0.33, -0.6], label: true });
+
+  // Fuel system: dual manifolds, 20 nozzles, pigtails, igniters, feed line
+  const fu = new THREE.Group();
+  const noz = [], fl = [], pig = [], fit = [];
+  for (let k = 0; k < 20; k++) {
+    const a = TAU * (k + 0.5) / 20;
+    const stem = tubeGeo([[0.485, 0, -0.385], [0.40, 0, -0.385], [0.355, 0, -0.39], [0.336, 0, -0.405], [0.333, 0, -0.418]], 0.0085, 16, 8); stem.rotateZ(a); noz.push(stem);
+    fl.push(at(new THREE.BoxGeometry(0.008, 0.05, 0.03), 0.474, a, -0.385));
+    fl.push(at(new THREE.CylinderGeometry(0.014, 0.014, 0.03, 10).rotateZ(-Math.PI / 2), 0.49, a, -0.385));
+    const p1 = tubeGeo([P(0.513, a + 0.05, -0.355), P(0.513, a + 0.02, -0.365), P(0.505, a, -0.378)], 0.0035, 10, 5); pig.push(p1);
+    const p2 = tubeGeo([P(0.522, a - 0.05, -0.395), P(0.52, a - 0.02, -0.392), P(0.505, a, -0.388)], 0.0035, 10, 5); pig.push(p2);
+    fit.push(at(new THREE.CylinderGeometry(0.007, 0.007, 0.012, 6).rotateZ(-Math.PI / 2), 0.5, a, -0.38));
+  }
+  fu.add(mesh(merge(noz), M.steel)); fu.add(mesh(merge(fl), M.steelDark)); fu.add(mesh(merge(pig), M.tube)); fu.add(mesh(merge(fit), M.brass));
+  fu.add(mesh(merge([new THREE.TorusGeometry(0.513, 0.0095, 8, 160).translate(0, 0, -0.355), new THREE.TorusGeometry(0.522, 0.008, 8, 160).translate(0, 0, -0.395)]), M.tube));
+  const feed = tubeGeo([P(0.53, rad(262), -0.12), P(0.56, rad(258), -0.22), P(0.545, rad(252), -0.33), P(0.518, rad(250), -0.355)], 0.011, 30, 8); fu.add(mesh(feed, M.tube));
+  const ig = []; for (const a of [rad(145), rad(35)]) { ig.push(at(new THREE.CylinderGeometry(0.011, 0.011, 0.06, 10).rotateZ(-Math.PI / 2), 0.48, a, -0.48)); ig.push(at(new THREE.CylinderGeometry(0.015, 0.015, 0.016, 6).rotateZ(-Math.PI / 2), 0.512, a, -0.48)); }
+  fu.add(mesh(merge(ig), M.cad));
+  const igl = tubeGeo([P(0.52, rad(145), -0.48), P(0.55, rad(150), -0.42), P(0.55, rad(165), -0.2), P(0.53, rad(190), 0.0)], 0.007, 30, 6); fu.add(mesh(igl, M.harnessSilver));
+  addPart('fuel', [{ obj: fu }], { clip: true, anchor: [-0.36, 0.36, -0.36], label: false });
+
+  // Combustor liner, dome, swirlers + flame volume
+  const co = new THREE.Group();
+  const linerHeat = (r, z, phi) => { const t = (-0.40 - z) / 0.42; const n = N2(phi * 6, z * 20, 256, 256); return heatColor(0.22 + 0.62 * Math.sin(Math.PI * clamp(t, 0, 1) * 0.9) + 0.18 * (n - 0.5)); };
+  const outerL = [[0.40, -0.425], [0.392, -0.55], [0.382, -0.70], [0.368, -0.80]], innerL = [[0.262, -0.425], [0.268, -0.55], [0.276, -0.70], [0.29, -0.80]];
+  const thickShell = (pts, t) => [...pts.map((p) => [p[0], p[1]]), ...pts.slice().reverse().map((p) => [p[0] + t, p[1]])];
+  co.add(mesh(lathe(thickShell(outerL, -0.007), { segments: 128, color: linerHeat }), M.linerHot));
+  co.add(mesh(lathe(thickShell(innerL, 0.007), { segments: 128, color: linerHeat }), M.linerHot));
+  co.add(mesh(lathe([[0.262, -0.428], [0.262, -0.415], [0.40, -0.415], [0.40, -0.428]], { segments: 128, color: (r, z, p) => heatColor(0.3 + 0.1 * N2(p * 5, 1, 256, 256)) }), M.linerHot));
+  co.add(mesh(lathe([[0.405, -0.43], [0.412, -0.39], [0.404, -0.355], [0.398, -0.355], [0.405, -0.39], [0.399, -0.43]], { segments: 128 }), M.steel));
+  co.add(mesh(lathe([[0.257, -0.43], [0.251, -0.39], [0.258, -0.355], [0.264, -0.355], [0.258, -0.39], [0.263, -0.43]], { segments: 128 }), M.steel));
+  const sw = []; for (let k = 0; k < 20; k++) { const a = TAU * (k + 0.5) / 20; sw.push(new THREE.TorusGeometry(0.026, 0.0065, 8, 20).translate(0.331, 0, -0.41).rotateZ(a)); sw.push(cylZ(0.016, 0.022, 14).translate(0.331, 0, -0.41).rotateZ(a)); }
+  co.add(mesh(merge(sw), M.steel));
+  flameMat = new THREE.ShaderMaterial({
+    uniforms: { uTime: { value: 0 }, uIntensity: { value: 0 } },
+    vertexShader: 'varying vec3 vPos; varying vec3 vN; varying vec3 vV; void main(){ vPos = (modelMatrix * vec4(position,1.0)).xyz; vN = normalize(normalMatrix*normal); vec4 mv = modelViewMatrix*vec4(position,1.0); vV = -mv.xyz; gl_Position = projectionMatrix*mv; }',
+    fragmentShader: `uniform float uTime; uniform float uIntensity; varying vec3 vPos; varying vec3 vN; varying vec3 vV;
+      float hash(vec3 p){ p = fract(p*0.3183099+0.1); p *= 17.0; return fract(p.x*p.y*p.z*(p.x+p.y+p.z)); }
+      float noise(vec3 x){ vec3 i=floor(x); vec3 f=fract(x); f=f*f*(3.0-2.0*f);
+        return mix(mix(mix(hash(i),hash(i+vec3(1,0,0)),f.x),mix(hash(i+vec3(0,1,0)),hash(i+vec3(1,1,0)),f.x),f.y),
+                   mix(mix(hash(i+vec3(0,0,1)),hash(i+vec3(1,0,1)),f.x),mix(hash(i+vec3(0,1,1)),hash(i+vec3(1,1,1)),f.x),f.y),f.z); }
+      void main(){
+        if (uIntensity < 0.002) discard;
+        float ang = atan(vPos.y, vPos.x);
+        float ax = clamp((-0.42 - vPos.z) / 0.38, 0.0, 1.0);
+        vec3 q = vec3(ang * 7.0, vPos.z * 16.0 + uTime * 6.0, length(vPos.xy) * 12.0);
+        float n = noise(q) * 0.6 + noise(q * 2.3 + vec3(0.0, uTime * 3.0, 0.0)) * 0.4;
+        float jets = pow(0.5 + 0.5 * cos(ang * 20.0 - 3.14159), 3.0);
+        float body = mix(jets, 1.0, smoothstep(0.05, 0.55, ax));
+        float a = body * (0.35 + 0.9 * n) * (1.0 - 0.7 * smoothstep(0.55, 1.0, ax));
+        vec3 blue = vec3(0.25, 0.5, 1.6), orange = vec3(3.0, 1.15, 0.25), white = vec3(3.6, 2.7, 1.7);
+        vec3 col = mix(blue, orange, smoothstep(0.02, 0.22, ax));
+        col = mix(col, white, smoothstep(0.62, 0.95, n) * (1.0 - ax));
+        float fr = abs(dot(normalize(vN), normalize(vV)));
+        gl_FragColor = vec4(col * a * uIntensity * (0.3 + 0.7 * fr), 1.0);
+      }`,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide,
+  });
+  const flame = new THREE.Mesh(lathe([[0.385, -0.43], [0.374, -0.62], [0.362, -0.79], [0.296, -0.79], [0.28, -0.62], [0.27, -0.43]], { segments: 96 }), flameMat);
+  flame.renderOrder = 5;
+  addPart('combustor', [{ obj: co }], { stage: 8, explode: [0, 0, -0.75], clip: true, glow: 1.6, anchor: [-0.235, 0.235, -0.6], label: true, down: true });
+  parts.combustor.pieces[0].root.add(flame); // added after registration so the shared flame uniforms are not cloned
+
+  // HPT: 2 stages (NGVs static, rotors on N2)
+  const hpt = new THREE.Group(), hs = spinGroup('n2'); hpt.add(hs);
+  const tbc = (s, u) => { const b = srgb(0.84, 0.78, 0.67), tip = srgb(0.42, 0.33, 0.27); const k = smooth(0.7, 1.0, s) * 0.8 + smooth(0.85, 1.0, 1 - u) * 0.2; return [lerp(b[0], tip[0], k), lerp(b[1], tip[1], k), lerp(b[2], tip[2], k)]; };
+  const ngv = [bladeRow({ rHub: 0.286, rTip: 0.384, z: -0.845, nSpan: 4, nChord: 8, chord: () => 0.05, stagger: () => rad(48), camber: () => 0.15, thick: () => 0.24, color: tbc }, 32), bladeRow({ rHub: 0.292, rTip: 0.39, z: -0.945, nSpan: 4, nChord: 8, chord: () => 0.046, stagger: () => rad(44), camber: () => 0.13, thick: () => 0.2, color: tbc }, 36)];
+  hpt.add(mesh(merge(ngv), M.bladeTBC));
+  const hr = [bladeRow({ rHub: 0.287, rTip: 0.376, z: -0.895, nSpan: 4, nChord: 8, chord: () => 0.04, stagger: (s) => rad(-28 - 8 * s), camber: () => -0.17, thick: () => 0.2, color: tbc }, 64), bladeRow({ rHub: 0.291, rTip: 0.382, z: -0.99, nSpan: 4, nChord: 8, chord: () => 0.04, stagger: (s) => rad(-28 - 8 * s), camber: () => -0.16, thick: () => 0.18, color: tbc }, 68)];
+  hs.add(mesh(merge(hr), M.bladeTBC));
+  const hd = (z) => [[0.292, z + 0.022], [0.268, z + 0.022], [0.25, z + 0.008], [0.17, z + 0.008], [0.135, z + 0.03], [0.115, z + 0.03], [0.115, z - 0.03], [0.135, z - 0.03], [0.17, z - 0.008], [0.25, z - 0.008], [0.268, z - 0.022], [0.292, z - 0.022]];
+  hs.add(mesh(merge([lathe(hd(-0.895), { segments: 96 }), lathe(hd(-0.99), { segments: 96 }), lathe([[0.27, -0.91], [0.27, -0.975], [0.255, -0.975], [0.255, -0.91]], { segments: 96 }), lathe([[0.16, -0.86], [0.11, -0.80], [0.10, -0.80], [0.15, -0.86]], { segments: 64 })]), M.disk));
+  hpt.add(mesh(merge([lathe([[0.281, -0.82], [0.289, -0.82], [0.289, -0.87], [0.281, -0.87]], { segments: 96 }), lathe([[0.287, -0.925], [0.295, -0.925], [0.295, -0.965], [0.287, -0.965]], { segments: 96 })]), M.steelDark));
+  addPart('hpt', [{ obj: hpt }], { stage: 8, explode: [0, 0, -1.2], glow: 0.55, anchor: [-0.245, 0.245, -0.92], label: true });
+
+  // LPT rotor (N1) — 5 shrouded stages
+  const lptHub = (z) => lerp(0.300, 0.322, (-1.05 - z) / 0.57), lptTip = (z) => lerp(0.392, 0.502, (-1.05 - z) / 0.57);
+  const lp = new THREE.Group(), ls = spinGroup('n1'); lp.add(ls);
+  const niHeat = (k) => (s, u) => heatColor(0.62 - k * 0.13 + 0.1 * s + 0.05 * Math.sin(u * 6));
+  const lr = [], shrouds = [], ldisk = [];
+  const lrC = [80, 88, 94, 100, 104];
+  for (let k = 0; k < 5; k++) {
+    const z = -1.13 - 0.11 * k, ch = lerp(0.04, 0.05, k / 4);
+    lr.push(bladeRow({ rHub: lptHub(z) - 0.004, rTip: lptTip(z) - 0.006, z, nSpan: 5, nChord: 6, chord: () => ch, stagger: (s) => rad(-32 - 6 * s), camber: () => -0.14, thick: () => 0.12, color: niHeat(k) }, lrC[k]));
+    const rt = lptTip(z) - 0.006;
+    shrouds.push(lathe([[rt, z + ch * 0.35], [rt + 0.006, z + ch * 0.35], [rt + 0.01, z + ch * 0.1], [rt + 0.006, z - ch * 0.35], [rt, z - ch * 0.35]], { segments: 128 }));
+    const rh = lptHub(z);
+    ldisk.push(lathe([[rh, z + 0.018], [rh - 0.02, z + 0.006], [0.2, z + 0.005], [0.17, z + 0.016], [0.15, z + 0.016], [0.15, z - 0.016], [0.17, z - 0.016], [0.2, z - 0.005], [rh - 0.02, z - 0.006], [rh, z - 0.018]], { segments: 96 }));
+  }
+  ldisk.push(lathe([[0.30, -1.08], [0.32, -1.08], [0.335, -1.62], [0.315, -1.62]], { segments: 96 }));
+  ldisk.push(lathe([[0.2, -1.6], [0.09, -1.72], [0.06, -1.74], [0.06, -1.755], [0.09, -1.74], [0.2, -1.62]], { segments: 64 }));
+  ls.add(mesh(merge(lr), M.bladeNi));
+  ls.add(mesh(merge(shrouds), M.disk));
+  ls.add(mesh(merge(ldisk), M.disk));
+  addPart('lpt', [{ obj: lp }], { stage: 7, explode: [0, 0, -1.65], glow: 0.12, anchor: [-0.31, 0.31, -1.36], label: true, down: true });
+
+  // LPT case (+ vanes, ACC manifold rings, EGT probes)
+  const lc = new THREE.Group();
+  const lcIn = (z) => lptTip(z) + 0.008;
+  const lcProf = caseProfile({ zF: -1.045, zB: -1.63, rIn: lcIn, thick: 0.018, flanges: [{ z: -1.052, w: 0.014, h: 0.028 }, { z: -1.623, w: 0.014, h: 0.028 }], n: 10 });
+  lc.add(mesh(lathe(lcProf, { segments: 128, color: (r, z, p) => heatColor(0.22 + 0.15 * smooth(-1.05, -1.6, z) + 0.1 * N2(p * 4, z * 10, 256, 256)) }), [M.heat, M.heat, M.steel]));
+  const lv = [];
+  const lvC = [64, 70, 76, 80, 84];
+  for (let k = 0; k < 5; k++) { const z = -1.075 - 0.11 * k, ch = lerp(0.042, 0.05, k / 4); lv.push(bladeRow({ rHub: lptHub(z) + 0.003, rTip: lptTip(z) + 0.009, z, nSpan: 4, nChord: 6, chord: () => ch, stagger: () => rad(34), camber: () => 0.13, thick: () => 0.13, color: niHeat(k) }, lvC[k])); }
+  lc.add(mesh(merge(lv), M.bladeNi));
+  const acc = []; for (let i = 0; i < 7; i++) { const z = -1.09 - i * 0.078, R = lcIn(z) + 0.018 + 0.013; acc.push(new THREE.TorusGeometry(R, 0.0062, 8, 128).translate(0, 0, z)); }
+  lc.add(mesh(merge(acc), M.tube));
+  const hdr = tubeGeo([P(0.505, Math.PI / 2, -1.06), P(0.545, Math.PI / 2, -1.33), P(0.565, Math.PI / 2, -1.6)], 0.016, 30, 10); lc.add(mesh(hdr, M.tube));
+  const sup = tubeGeo([P(0.505, Math.PI / 2, -1.06), P(0.52, Math.PI / 2 + 0.1, -0.98), P(0.55, Math.PI / 2 + 0.25, -0.75)], 0.014, 24, 10); lc.add(mesh(sup, M.tube));
+  const egt = []; for (let i = 0; i < 8; i++) { const a = TAU * (i + 0.25) / 8; egt.push(at(new THREE.CylinderGeometry(0.006, 0.006, 0.05, 8).rotateZ(-Math.PI / 2), lcIn(-1.10) + 0.03, a, -1.10)); egt.push(at(new THREE.CylinderGeometry(0.011, 0.011, 0.012, 6).rotateZ(-Math.PI / 2), lcIn(-1.10) + 0.05, a, -1.10)); }
+  lc.add(mesh(merge(egt), M.cad));
+  lc.add(mesh(new THREE.TorusGeometry(lcIn(-1.10) + 0.055, 0.0045, 6, 128).translate(0, 0, -1.115), M.harnessSilver));
+  lc.add(mesh(merge([boltRing({ count: 48, r: lcIn(-1.045) + 0.032, z: -1.045, dir: '+z' }), boltRing({ count: 56, r: lcIn(-1.63) + 0.032, z: -1.63, dir: '-z' })]), M.bolt));
+  addPart('lptCase', [{ obj: lc }], { stage: 7, explode: [0, 0, -2.25], clip: true, shell: true, anchor: [-0.34, 0.34, -1.28], label: true });
+
+  // Turbine rear frame
+  const tr = new THREE.Group();
+  tr.add(mesh(lathe(caseProfile({ zF: -1.635, zB: -1.81, rIn: () => 0.522, thick: 0.024, flanges: [{ z: -1.64, w: 0.012, h: 0.022 }, { z: -1.805, w: 0.012, h: 0.022 }], n: 4 }), { segments: 128 }), [M.steelDark, M.steel, M.steel]));
+  tr.add(mesh(lathe([[0.33, -1.635], [0.33, -1.81], [0.30, -1.81], [0.30, -1.635]], { segments: 96 }), M.steelDark));
+  tr.add(mesh(bladeRow({ rHub: 0.325, rTip: 0.527, z: -1.72, nSpan: 4, nChord: 10, chord: () => 0.13, stagger: () => rad(6), camber: () => 0.02, thick: () => 0.17 }, 14), M.strut));
+  tr.add(mesh(lathe([[0.30, -1.70], [0.13, -1.72], [0.13, -1.735], [0.30, -1.725]], { segments: 64 }), M.steel));
+  const lug = []; for (const dx of [-0.07, 0.07]) { const b = new THREE.BoxGeometry(0.03, 0.07, 0.1); b.translate(dx, 0.575, -1.72); lug.push(b); }
+  tr.add(mesh(merge(lug), M.steel));
+  addPart('trf', [{ obj: tr }], { stage: 6, explode: [0, 0, -2.7], clip: true, anchor: [-0.3, 0.3, -1.72], label: true, down: true });
+
+  // Core exhaust nozzle
+  const ex = new THREE.Group();
+  const exProf = [[0.47, -2.15], [0.50, -1.97], [0.548, -1.74], [0.578, -1.56], [0.588, -1.25], [0.565, -1.25], [0.565, -1.60], [0.535, -1.70], [0.49, -1.93], [0.458, -2.145]];
+  ex.add(mesh(lathe(exProf, { segments: 128, color: (r, z, p) => heatColor(0.12 + 0.55 * smooth(-1.4, -2.15, z) + 0.12 * N2(p * 4, z * 6, 256, 256)) }), M.heat));
+  ex.add(mesh(boltRing({ count: 60, r: 0.58, z: -1.30, dir: 'radial', size: 0.005 }), M.bolt));
+  addPart('exhaust', [{ obj: ex }], { stage: 6, explode: [0, 0, -3.3], clip: true, shell: true, anchor: [-0.36, 0.36, -1.95], label: true });
+
+  // Exhaust plug
+  const pl = [[0, -1.64], [0.322, -1.64]]; for (let i = 1; i <= 16; i++) { const t = i / 16; pl.push([i === 16 ? 0 : 0.322 * Math.pow(Math.cos(t * Math.PI / 2), 0.8), -1.64 - 0.92 * t]); }
+  const plug = new THREE.Group(); plug.add(mesh(lathe(pl, { closed: false, segments: 96, color: (r, z, p) => heatColor(0.1 + 0.35 * smooth(-1.64, -2.3, z) + 0.1 * N2(p * 3, z * 5, 256, 256)) }), M.plug));
+  addPart('plug', [{ obj: plug }], { stage: 6, explode: [0, 0, -4.0], anchor: [-0.1, 0.12, -2.25], label: true, down: true });
+}
+
+// ---- Systems: shafts, accessory gearbox, externals, core cowl ---------------------------------
+function buildSystems() {
+  // Shafts & bearings
+  const sh = new THREE.Group(), s1 = spinGroup('n1'), s2 = spinGroup('n2'); sh.add(s1, s2);
+  s1.add(mesh(lathe([[0.052, -1.78], [0.052, 1.48], [0.038, 1.48], [0.038, -1.78]], { segments: 48 }), M.chrome));
+  s1.add(mesh(merge([lathe([[0.07, 1.44], [0.07, 1.5], [0.052, 1.5], [0.052, 1.44]], { segments: 48 }), lathe([[0.065, -1.70], [0.065, -1.76], [0.052, -1.76], [0.052, -1.70]], { segments: 48 })]), M.steel));
+  s2.add(mesh(lathe([[0.095, -1.0], [0.095, 0.60], [0.08, 0.60], [0.08, -1.0]], { segments: 64 }), M.chrome));
+  s2.add(mesh(merge([lathe([[0.112, 0.56], [0.112, 0.62], [0.095, 0.62], [0.095, 0.56]], { segments: 64 }), lathe([[0.112, -0.80], [0.112, -0.86], [0.095, -0.86], [0.095, -0.80]], { segments: 64 })]), M.steel));
+  const bearing = (z, rIn, rOut, rb) => {
+    const list = [lathe([[rIn + 0.012, z - 0.016], [rIn + 0.012, z + 0.016], [rIn, z + 0.016], [rIn, z - 0.016]], { segments: 48 }), lathe([[rOut, z - 0.018], [rOut, z + 0.018], [rOut - 0.012, z + 0.018], [rOut - 0.012, z - 0.018]], { segments: 48 })];
+    const n = Math.round(TAU * (rIn + rOut) / 2 / (rb * 2.6)), rm = (rIn + 0.012 + rOut - 0.012) / 2;
+    for (let k = 0; k < n; k++) list.push(new THREE.SphereGeometry(rb, 10, 8).translate(rm, 0, z).rotateZ(TAU * k / n));
+    return merge(list, 'bearing');
+  };
+  sh.add(mesh(merge([bearing(1.30, 0.054, 0.118, 0.014), bearing(1.18, 0.054, 0.118, 0.014), bearing(0.58, 0.098, 0.158, 0.012), bearing(-0.95, 0.054, 0.079, 0.0055), bearing(-1.72, 0.054, 0.118, 0.014)]), M.chrome));
+  addPart('shafts', [{ obj: sh }], { stage: 9, explode: [0, -1.25, 0], anchor: [0, 0.1, -0.2], label: true });
+
+  // Accessory gearbox (curved, core-mounted at 6 o'clock) + accessories
+  const ag = new THREE.Group(), a0 = rad(244), aL = rad(52);
+  const agProf = [[0.462, -0.08], [0.47, -0.10], [0.545, -0.10], [0.555, -0.08], [0.555, 0.38], [0.545, 0.40], [0.47, 0.40], [0.462, 0.38]];
+  ag.add(shell(agProf, a0, aL, [M.cast], { segments: 40 }));
+  ag.add(mesh(merge([boltRing({ count: 22, r: 0.535, z: 0.40, dir: '+z', phiStart: a0, phiLen: aL, size: 0.005 }), boltRing({ count: 22, r: 0.535, z: -0.10, dir: '-z', phiStart: a0, phiLen: aL, size: 0.005 })]), M.bolt));
+  // cylinders built along +Z from the face: front face z=0.40 pointing forward, rear face z=-0.10 pointing aft
+  const accF = (r, phi, len, rr, mat, fins) => { const g = cylZ(rr, Math.abs(len), 28); g.translate(r, 0, 0.40 + len / 2); const pad = cylZ(rr * 1.18, 0.014, 28); pad.translate(r, 0, 0.407); const list = [g, pad]; for (let i = 0; i < (fins || 0); i++) { const f = cylZ(rr * 1.07, 0.005, 28); f.translate(r, 0, 0.44 + i * 0.022); list.push(f); } ag.add(mesh(merge(list.map((x) => x.rotateZ(phi))), mat)); };
+  const accR = (r, phi, len, rr, mat) => { const g = cylZ(rr, len, 28); g.translate(r, 0, -0.10 - len / 2); const pad = cylZ(rr * 1.18, 0.014, 28); pad.translate(r, 0, -0.107); ag.add(mesh(merge([g, pad].map((x) => x.rotateZ(phi))), mat)); };
+  accF(0.505, rad(256), 0.17, 0.052, M.accessory, 0);       // air-turbine starter
+  accF(0.51, rad(284), 0.21, 0.07, M.accessory2, 6);        // IDG generator
+  accR(0.505, rad(260), 0.13, 0.048, M.accessory);          // fuel pump
+  accR(0.50, rad(278), 0.11, 0.038, M.steel);               // lube & scavenge pump
+  accR(0.505, rad(291), 0.12, 0.04, M.accessory);           // hydraulic pump
+  const hmu = new RoundedBoxGeometry(0.07, 0.1, 0.1, 2, 0.01); hmu.translate(0.535, 0, -0.17); hmu.rotateZ(rad(262)); ag.add(mesh(hmu, M.accessory));
+  const sd = tubeGeo([P(0.505, rad(256), 0.57), P(0.53, rad(256), 0.61), P(0.585, rad(250), 0.56)], 0.03, 20, 12); ag.add(mesh(sd, M.steel));
+  const tower = tubeGeo([P(0.47, rad(270), 0.33), P(0.40, rad(270), 0.47), P(0.30, rad(270), 0.62)], 0.022, 20, 12); ag.add(mesh(tower, M.steelDark));
+  addPart('agb', [{ obj: ag }], { stage: 5, explode: [-1.1, -0.42, 0.3], anchor: [0, -0.57, 0.16], label: true });
+
+  // Externals: bleed manifolds & ducts, harnesses, oil lines
+  const ext = new THREE.Group();
+  const env = interp([0.60, 0.40, 0.0, -0.30, -0.40, -0.80, -1.0, -1.30, -1.60], [0.43, 0.425, 0.405, 0.41, 0.47, 0.455, 0.44, 0.49, 0.53]);
+  ext.add(mesh(merge([new THREE.TorusGeometry(0.432, 0.015, 10, 128).translate(0, 0, 0.215), new THREE.TorusGeometry(0.418, 0.013, 10, 128).translate(0, 0, -0.08)]), M.tubeHot));
+  const ducts = [];
+  for (const [a, z, r0] of [[rad(62), 0.215, 0.432], [rad(118), -0.08, 0.418]]) {
+    ducts.push(tubeGeo([P(r0 + 0.01, a, z), P(r0 + 0.06, a + (a < 1.5 ? 0.05 : -0.05), z - 0.02), P(0.53, (a + Math.PI / 2) / 2, z - 0.06), P(0.6, Math.PI / 2 + (a < 1.5 ? -0.05 : 0.05), z - 0.1)], 0.026, 40, 12));
+  }
+  ext.add(mesh(merge(ducts), M.tubeHot));
+  const flg = []; for (const [a, z, r0] of [[rad(62), 0.215, 0.432], [rad(118), -0.08, 0.418]]) { flg.push(at(new THREE.TorusGeometry(0.031, 0.006, 8, 20).rotateY(Math.PI / 2), r0 + 0.035, a, z)); }
+  ext.add(mesh(merge(flg), M.steel));
+  const valve = new THREE.Group(); valve.add(mesh(at(cylZ(0.04, 0.06, 20).rotateY(0.6), 0.54, rad(80), 0.12), M.accessory)); valve.add(mesh(at(new RoundedBoxGeometry(0.05, 0.06, 0.05, 2, 0.008), 0.6, rad(78), 0.12), M.accessory)); ext.add(valve);
+  const harnessPhis = [rad(20), rad(160), rad(205)], hg = [], cl = [];
+  for (const a of harnessPhis) {
+    const pts = []; for (let i = 0; i <= 14; i++) { const z = 0.58 - 1.85 * i / 14; pts.push(P(env(z) + 0.045, a + 0.02 * Math.sin(i * 0.9), z)); }
+    const g = tubeGeo(pts, 0.0095, 120, 8); hg.push(g); cl.push(clampsAlong(g.userData.curve, 0.0095, 12));
+  }
+  const ring1 = []; for (let i = 0; i <= 32; i++) ring1.push(P(0.47, rad(20) + (rad(205) - rad(20)) * i / 32, 0.46)); hg.push(tubeGeo(ring1, 0.008, 80, 8));
+  ext.add(mesh(merge(hg), M.harness)); ext.add(mesh(merge(cl), M.steel));
+  const oil = []; for (const a of [rad(274), rad(280), rad(286)]) { const pts = []; for (let i = 0; i <= 10; i++) { const z = -0.12 - 1.55 * i / 10; pts.push(P(env(z) + 0.065 + (a - rad(280)) * 0.1, a, z)); } pts.push(P(0.58, a, -1.72)); oil.push(tubeGeo(pts, 0.0058, 80, 6)); }
+  ext.add(mesh(merge(oil), M.tube));
+  addPart('externals', [{ obj: ext }], { stage: 5, explode: [0, 1.05, 0], clip: true, anchor: [-0.31, 0.38, 0.21], label: true });
+
+  // Core cowl (split halves)
+  const ccR = [[0.64, 0.62], [0.645, 0.35], [0.635, 0.0], [0.61, -0.5], [0.585, -1.25]];
+  const ccProf = [...ccR.map((p) => [p[0], p[1], 0]), ...ccR.slice().reverse().map((p) => [p[0] - 0.024, p[1], 1])];
+  const half = (left) => shell(ccProf, left ? Math.PI / 2 + 0.004 : -Math.PI / 2 + 0.004, Math.PI - 0.008, [M.composite, M.cowlInner], { segments: 72, capMat: 1 });
+  addPart('coreCowl', [{ obj: half(true), explode: [-1.6, -0.1, 0] }, { obj: half(false), explode: [1.6, -0.1, 0] }], { stage: 4, clip: true, shell: true, anchor: [-0.45, 0.45, 0.2], label: true });
+}
+
+function buildBVH() {
+  const seen = new Set();
+  for (const m of pickables) { const g = m.geometry; if (seen.has(g)) continue; seen.add(g); g.computeBoundsTree(); }
+}
+
+/* =====================================================================
+   10. AIRFLOW PARTICLES (cold bypass stream + core stream heated by cycle)
+   ===================================================================== */
+const Airflow = (() => {
+  const MAX = 4800;
+  const geo = new THREE.BufferGeometry();
+  const pos = new Float32Array(MAX * 3), col = new Float32Array(MAX * 3), alp = new Float32Array(MAX);
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aColor', new THREE.BufferAttribute(col, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('aAlpha', new THREE.BufferAttribute(alp, 1).setUsage(THREE.DynamicDrawUsage));
+  const mat = new THREE.ShaderMaterial({
+    uniforms: { uSize: { value: 0.03 }, uScale: { value: 800 }, uOpacity: { value: 0 } },
+    vertexShader: 'attribute vec3 aColor; attribute float aAlpha; uniform float uSize; uniform float uScale; varying vec3 vC; varying float vA; void main(){ vC = aColor; vA = aAlpha; vec4 mv = modelViewMatrix * vec4(position,1.0); gl_PointSize = clamp(uSize * uScale / -mv.z, 1.0, 64.0); gl_Position = projectionMatrix * mv; }',
+    fragmentShader: 'uniform float uOpacity; varying vec3 vC; varying float vA; void main(){ vec2 c = gl_PointCoord - 0.5; float d = length(c); if (d > 0.5) discard; float a = smoothstep(0.5, 0.05, d); gl_FragColor = vec4(vC, a * vA * uOpacity); }',
+    transparent: true, depthWrite: false,
+  });
+  const points = new THREE.Points(geo, mat); points.frustumCulled = false; points.renderOrder = 6; points.visible = false; scene.add(points);
+  const stream = new Uint8Array(MAX), f = new Float32Array(MAX), phi = new Float32Array(MAX), z = new Float32Array(MAX), jit = new Float32Array(MAX);
+  const R = rng(99);
+  const CZ = [2.7, 2.08, 1.9, 1.75, 1.62, 1.40, 1.24, 1.12, 0.80, 0.58, 0.55, -0.28, -0.40, -0.80, -0.84, -1.02, -1.06, -1.62, -1.80, -2.15, -3.3];
+  const coreHub = interp(CZ, [0.0, 0.0, 0.14, 0.24, 0.31, 0.32, 0.335, 0.36, 0.385, 0.275, 0.27, 0.296, 0.275, 0.292, 0.29, 0.30, 0.30, 0.322, 0.322, 0.20, 0.05]);
+  const coreTip = interp(CZ, [0.50, 0.50, 0.52, 0.53, 0.54, 0.545, 0.54, 0.53, 0.505, 0.40, 0.392, 0.336, 0.39, 0.362, 0.372, 0.384, 0.392, 0.50, 0.52, 0.47, 0.52]);
+  const BZ = [2.7, 1.62, 1.24, 0.95, 0.62, 0.0, -0.45, -1.2, -2.2, -3.3];
+  const byIn = interp(BZ, [0.58, 0.58, 0.60, 0.645, 0.655, 0.645, 0.625, 0.60, 0.565, 0.56]);
+  const byOut = interp(BZ, [0.90, 0.905, 0.925, 0.945, 0.945, 0.925, 0.875, 0.89, 0.905, 0.93]);
+  const temp = interp([1.4, 0.8, -0.28, -0.40, -0.55, -0.80, -1.02, -1.62, -2.4, -3.3], [15, 110, 650, 700, 1900, 1600, 1050, 640, 560, 380]);
+  const TS = [[15, [0.45, 0.75, 1.0]], [120, [0.75, 0.9, 1.0]], [400, [1.0, 0.95, 0.8]], [650, [1.0, 0.75, 0.38]], [1000, [1.5, 0.6, 0.15]], [1600, [2.3, 0.85, 0.22]], [1900, [2.8, 1.6, 0.6]]];
+  const tcol = (T, out, o) => { for (let i = 1; i < TS.length; i++) if (T <= TS[i][0] || i === TS.length - 1) { const [t0, a] = TS[i - 1], [t1, b] = TS[i], k = clamp((T - t0) / (t1 - t0), 0, 1); out[o] = lerp(a[0], b[0], k); out[o + 1] = lerp(a[1], b[1], k); out[o + 2] = lerp(a[2], b[2], k); return; } };
+  let count = 3200, cutMode = false;
+  const spawn = (i, initial) => {
+    stream[i] = R() < 0.48 ? 0 : 1; f[i] = 0.08 + R() * 0.84; jit[i] = R();
+    phi[i] = cutMode ? lerp(Math.PI / 2 - 0.15, Math.PI + 0.15, R()) : R() * TAU;
+    z[i] = initial ? lerp(-3.2, 2.7, R()) : 2.7 + R() * 0.25;
+  };
+  for (let i = 0; i < MAX; i++) spawn(i, true);
+  return {
+    points,
+    setCount(n) { count = Math.min(MAX, n); geo.setDrawRange(0, count); },
+    setCutMode(c) { if (cutMode === c) return; cutMode = c; for (let i = 0; i < MAX; i++) spawn(i, true); },
+    setScale(s) { mat.uniforms.uScale.value = s; },
+    update(dt, n1, lit, opacity) {
+      mat.uniforms.uOpacity.value = opacity; points.visible = opacity > 0.01;
+      if (!points.visible) return;
+      const spd = 0.25 + 1.0 * n1;
+      for (let i = 0; i < count; i++) {
+        let zz = z[i]; const core = stream[i] === 1; let v;
+        if (core) v = zz > 1.4 ? 1.6 : zz > -0.3 ? 1.05 : zz > -0.84 ? 0.62 : zz > -1.62 ? 1.4 : 2.4;
+        else v = zz > -0.45 ? 1.9 : 2.6;
+        zz -= v * spd * dt * (0.85 + 0.3 * jit[i]);
+        if (core && zz > -0.3 && zz < 1.4) phi[i] += 0.25 * spd * dt;
+        if (zz < -3.3) { spawn(i, false); zz = z[i]; }
+        z[i] = zz;
+        let r;
+        if (core) { const h = coreHub(zz), t = coreTip(zz); r = h + (t - h) * f[i]; } else { const a = byIn(zz), b = byOut(zz); r = a + (b - a) * f[i]; if (zz < -0.45) r += (zz + 0.45) * -0.02 * (f[i] - 0.5); }
+        const c = Math.cos(phi[i]), s = Math.sin(phi[i]);
+        pos[i * 3] = r * c; pos[i * 3 + 1] = r * s; pos[i * 3 + 2] = zz;
+        if (core) { const T = lit > 0.05 ? lerp(Math.min(temp(zz), 650), temp(zz), lit) : Math.min(temp(zz), 320); tcol(T, col, i * 3); }
+        else { col[i * 3] = 0.16; col[i * 3 + 1] = 0.48; col[i * 3 + 2] = 1.15; }
+        alp[i] = clamp((2.75 - zz) / 0.35, 0, 1) * clamp((zz + 3.3) / 0.7, 0, 1) * (core ? 1.0 : 0.85);
+      }
+      geo.attributes.position.needsUpdate = true; geo.attributes.aColor.needsUpdate = true; geo.attributes.aAlpha.needsUpdate = true;
+    },
+  };
+})();
+
+/* =====================================================================
+   11. AUDIO — Web Audio mixer, synthesized engine & UI sounds
+   ===================================================================== */
+const Sound = {
+  ctx: null, master: null, eng: null, ui: null,
+  init() {
+    if (this.ctx) { if (this.ctx.state === 'suspended') this.ctx.resume(); return; }
+    const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
+    const ctx = this.ctx = new AC();
+    const comp = ctx.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 4; comp.connect(ctx.destination);
+    this.master = ctx.createGain(); this.master.connect(comp);
+    this.eng = ctx.createGain(); this.ui = ctx.createGain();
+    // generated hangar impulse response for reverb on the engine bus
+    const len = Math.floor(ctx.sampleRate * 2.4), ir = ctx.createBuffer(2, len, ctx.sampleRate);
+    for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3.2); }
+    const conv = ctx.createConvolver(); conv.buffer = ir; const wet = ctx.createGain(); wet.gain.value = 0.22;
+    this.eng.connect(this.master); this.eng.connect(conv); conv.connect(wet); wet.connect(this.master); this.ui.connect(this.master);
+    // engine voices
+    const nb = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), nd = nb.getChannelData(0); let last = 0;
+    for (let i = 0; i < nd.length; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; nd[i] = w * 0.6 + last * 3; }
+    const noise = ctx.createBufferSource(); noise.buffer = nb; noise.loop = true;
+    this.roarF = ctx.createBiquadFilter(); this.roarF.type = 'lowpass'; this.roarF.frequency.value = 300; this.roarG = ctx.createGain(); this.roarG.gain.value = 0;
+    noise.connect(this.roarF); this.roarF.connect(this.roarG); this.roarG.connect(this.eng);
+    this.hissF = ctx.createBiquadFilter(); this.hissF.type = 'bandpass'; this.hissF.Q.value = 0.8; this.hissF.frequency.value = 3000; this.hissG = ctx.createGain(); this.hissG.gain.value = 0;
+    noise.connect(this.hissF); this.hissF.connect(this.hissG); this.hissG.connect(this.eng);
+    this.whine = ctx.createOscillator(); this.whine.type = 'triangle'; this.whine.frequency.value = 400;
+    this.whine2 = ctx.createOscillator(); this.whine2.type = 'sine'; this.whine2.frequency.value = 800;
+    this.whineG = ctx.createGain(); this.whineG.gain.value = 0; this.whine.connect(this.whineG); this.whine2.connect(this.whineG);
+    const wf = ctx.createBiquadFilter(); wf.type = 'bandpass'; wf.Q.value = 3; wf.frequency.value = 2500; this.whineF = wf; this.whineG.connect(wf); wf.connect(this.eng);
+    this.buzz = ctx.createOscillator(); this.buzz.type = 'sawtooth'; this.buzz.frequency.value = 60; this.buzzG = ctx.createGain(); this.buzzG.gain.value = 0;
+    const bf = ctx.createBiquadFilter(); bf.type = 'lowpass'; bf.frequency.value = 500; this.buzz.connect(bf); bf.connect(this.buzzG); this.buzzG.connect(this.eng);
+    noise.start(); this.whine.start(); this.whine2.start(); this.buzz.start();
+    this.applyVolumes();
+  },
+  applyVolumes() { if (!this.ctx) return; const t = this.ctx.currentTime; this.master.gain.setTargetAtTime(settings.vol / 100, t, 0.05); this.eng.gain.setTargetAtTime(settings.engVol / 100 * 0.9, t, 0.05); this.ui.gain.setTargetAtTime(settings.uiVol / 100 * 0.5, t, 0.05); },
+  engine(n1, n2, flame) {
+    if (!this.ctx) return; const t = this.ctx.currentTime, k = 0.12;
+    this.roarG.gain.setTargetAtTime(0.02 + 0.32 * n1 * n1 + 0.05 * flame, t, k); this.roarF.frequency.setTargetAtTime(180 + 1600 * n1, t, k);
+    this.hissG.gain.setTargetAtTime(0.06 * n1, t, k); this.hissF.frequency.setTargetAtTime(1800 + 3000 * n1, t, k);
+    this.whine.frequency.setTargetAtTime(220 + 2400 * n2, t, k); this.whine2.frequency.setTargetAtTime(440 + 4800 * n2, t, k);
+    this.whineF.frequency.setTargetAtTime(400 + 4000 * n2, t, k); this.whineG.gain.setTargetAtTime(0.05 * Math.min(1, n2 * 1.6), t, k);
+    this.buzz.frequency.setTargetAtTime(30 + 120 * n1, t, k); this.buzzG.gain.setTargetAtTime(0.05 * n1 * n1, t, k);
+    if (n1 + n2 < 0.002) { this.roarG.gain.setTargetAtTime(0, t, k); }
+  },
+  blip(freq = 880, dur = 0.07, type = 'sine', gain = 0.25) {
+    if (!this.ctx) return; const c = this.ctx, t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq * (0.97 + Math.random() * 0.06), t); o.frequency.exponentialRampToValueAtTime(freq * 1.5, t + dur);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(gain, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); g.connect(this.ui); o.start(t); o.stop(t + dur + 0.02);
+  },
+  whoosh(dur = 0.9, up = true) {
+    if (!this.ctx) return; const c = this.ctx, t = c.currentTime, len = Math.floor(c.sampleRate * dur), b = c.createBuffer(1, len, c.sampleRate), d = b.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const s = c.createBufferSource(); s.buffer = b; const f = c.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 1.4;
+    f.frequency.setValueAtTime(up ? 300 : 1800, t); f.frequency.exponentialRampToValueAtTime(up ? 1800 : 300, t + dur);
+    const g = c.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + dur * 0.35); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f); f.connect(g); g.connect(this.ui); s.start(t);
+  },
+  suspend() { if (this.ctx && this.ctx.state === 'running') this.ctx.suspend(); },
+  resume() { if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume(); },
+};
+
+/* =====================================================================
+   12. STATE, SETTINGS & STEPS
+   ===================================================================== */
+let settings = { ...DEFAULT_SETTINGS };
+try { const s = JSON.parse(localStorage.getItem('aeros.tf9.settings') || 'null'); if (s) settings = { ...settings, ...s }; } catch (e) { /* storage unavailable */ }
+function saveSettings() { try { localStorage.setItem('aeros.tf9.settings', JSON.stringify(settings)); } catch (e) { /* ignore */ } }
+
+const state = {
+  step: 0, selected: null, hovered: null, isolated: null, xray: false, cut: 0, cutTarget: 0, airflow: false, labels: false,
+  running: false, throttle: 0.2, n1: 0, n2: 0, flame: 0, angleN1: 0, angleN2: 0, autoplay: false, autoT: 0,
+  lastInteract: performance.now(), lastInput: 'kbm', dynScale: 1, ready: false, explodeManual: null,
+};
+
+const STEPS = [
+  { title: 'AEROS TF-9 High-Bypass Turbofan', chip: 'Overview', text: 'A 130 kN-class engine for single-aisle airliners. Drag to orbit, scroll to zoom and click any component to learn what it does — or press Next to take it apart step by step.', cam: { pos: [-6.3, 2.0, 6.9], target: [0, -0.1, -0.2] }, focus: [] },
+  { title: 'Open the cowlings', chip: 'Nacelle', text: 'The fan-cowl doors and thrust-reverser C-ducts hinge up from the pylon, just as a crew opens them on the ramp — revealing the fan case, gearbox and core cowl underneath.', cam: { pos: [-3.6, 0.9, 8.4], target: [0, 0.35, 0.2] }, focus: ['fanCowl', 'thrustReverser'] },
+  { title: 'Remove the nacelle', chip: 'Nacelle', text: 'The nacelle is the engine\'s aerodynamic shell. The inlet conditions air for the fan; the C-ducts form the outer wall of the bypass duct and house the thrust reverser.', cam: { pos: [-9.2, 4.4, 8.8], target: [0, 0.4, 0.4] }, focus: ['inlet', 'pylon'], seq: ['pylon', 'inlet', 'fanCowl', 'thrustReverser'] },
+  { title: 'Fan & spinner', chip: 'Fan module', text: 'The 1.81 m fan is the main thrust producer. Twenty swept carbon-composite blades move about 480 kg of air per second at take-off — and nine of every ten kilograms never enter the core.', cam: { pos: [-5.0, 1.7, 7.9], target: [0, 0.0, 2.9] }, focus: ['fan', 'spinner'], seq: ['spinner', 'fan'] },
+  { title: 'Fan case & fan frame', chip: 'Fan module', text: 'The containment case would catch a released blade. Behind the fan, outlet guide vanes straighten the bypass flow while the splitter divides it: 9.8 parts around the core, one part into it.', cam: { pos: [-5.9, 2.4, 5.7], target: [0, 0, 1.5] }, focus: ['fanCase', 'fanFrame'], seq: ['fanCase', 'eec', 'fanFrame', 'coreCowl'] },
+  { title: 'Booster, gearbox & externals', chip: 'LP compressor', text: 'The three-stage booster spins with the fan to supercharge the core air. Below the core, the accessory gearbox drives pumps and the generator; above it run bleed ducts, harnesses and oil lines.', cam: { pos: [-3.6, 3.3, 4.2], target: [-0.3, -0.25, 0.85] }, focus: ['booster', 'agb', 'externals'], seq: ['externals', 'agb', 'booster'] },
+  { title: 'Exhaust & rear frame', chip: 'Exhaust', text: 'Working from the back, the plug, core nozzle and turbine rear frame come off first. The rear frame carries the aft engine mount and the No.5 bearing.', cam: { pos: [-5.4, 2.8, -2.2], target: [0, -0.1, -4.9] }, focus: ['plug', 'exhaust', 'trf'], seq: ['plug', 'exhaust', 'trf'] },
+  { title: 'Low-pressure turbine', chip: 'Turbine', text: 'Five LPT stages extract the energy that drives the fan and booster through the long inner LP shaft. Clearance-control rings spray cool fan air on the case to keep blade-tip gaps tight.', cam: { pos: [-3.7, 2.9, -0.9], target: [0, -0.05, -3.2] }, focus: ['lpt', 'lptCase'], seq: ['lptCase', 'lpt'] },
+  { title: 'High-pressure turbine & combustor', chip: 'Hot section', text: 'Twenty fuel nozzles feed an annular combustor where the flame reaches ~2,000 °C. The two-stage HPT, cooled from within by compressor air, survives gas hotter than its own melting point.', cam: { pos: [-2.7, 2.9, 0.25], target: [0, -0.05, -1.7] }, focus: ['hpt', 'combustor', 'fuel'], seq: ['hpt', 'combustor'] },
+  { title: 'HP compressor & shafts — fully exploded', chip: 'Core', text: 'The case splits to reveal the 9-stage HPC, which squeezes air ~19×. Two concentric shafts link the spools: LP (fan ↔ LPT) inside, HP (HPC ↔ HPT) outside.', cam: { pos: [-10.6, 9.4, 5.8], target: [0, -0.2, -0.3] }, focus: ['hpc', 'hpcCase', 'shafts'], seq: ['hpcCase', 'hpc', 'shafts'] },
+  { title: 'How it works: suck, squeeze, bang, blow', chip: 'Principle', text: 'The Brayton cycle: air is compressed ~40:1, burned at constant pressure and expanded through the turbines. Hot core flow drives the spools; cold bypass flow makes most of the thrust. Drag the throttle to spool up.', cam: { pos: [-5.7, 3.0, 4.9], target: [0, 0.0, -0.3] }, focus: [], cutaway: true, airflow: true, running: true, stations: true },
+];
+const LAST = STEPS.length - 1;
+
+// Thermodynamic station callouts (shown in the How-it-works step)
+const STATIONS = [
+  { n: '2', t: 'Fan face', v: '15 °C · 1.0 bar', r: 0.62, z: 1.68, cold: true, h: 40 },
+  { n: '13', t: 'Fan exit (bypass)', v: '60 °C · 1.5 bar', r: 0.8, z: 0.86, cold: true, h: 120 },
+  { n: '25', t: 'Booster exit', v: '110 °C · 2.1 bar', r: 0.45, z: 0.74, h: 160, down: true },
+  { n: '3', t: 'HPC exit', v: '650 °C · 40 bar', r: 0.32, z: -0.31, h: 60 },
+  { n: '4', t: 'Combustor exit', v: '1,600 °C · 38 bar', r: 0.33, z: -0.82, h: 120, down: true },
+  { n: '45', t: 'HPT exit', v: '1,050 °C · 9 bar', r: 0.35, z: -1.04, h: 130 },
+  { n: '5', t: 'LPT exit (EGT)', v: '640 °C · 1.3 bar', r: 0.43, z: -1.64, h: 60, down: true },
+];
+
+/* =====================================================================
+   13. ANIMATION SYSTEM (tweens) & PART TRANSFORMS
+   ===================================================================== */
+const tweens = [];
+function tween(o) { const tw = { t: -(o.delay || 0), dur: Math.max(0.0001, o.dur), ease: o.ease || Ease.inOutCubic, update: o.update, done: o.done, dead: false }; tweens.push(tw); return tw; }
+function updateTweens(dt) {
+  for (let i = tweens.length - 1; i >= 0; i--) {
+    const tw = tweens[i]; if (tw.dead) { tweens.splice(i, 1); continue; }
+    tw.t += dt; if (tw.t < 0) continue;
+    const k = Math.min(1, tw.t / tw.dur); tw.update(tw.ease(k), k);
+    if (k >= 1) { tweens.splice(i, 1); if (tw.done) tw.done(); }
+  }
+}
+const animScale = () => (settings.reducedMotion ? 0.45 : 1);
+function animatePart(p, eT, openT, delay, dur = CONFIG.anim.partDur) {
+  if (p.tw) p.tw.dead = true;
+  const e0 = p.e, o0 = p.open;
+  if (Math.abs(e0 - eT) < 1e-4 && Math.abs(o0 - openT) < 1e-4) return;
+  p.tw = tween({ dur: dur * animScale(), delay: delay * animScale(), ease: Ease.inOutCubic, update: (k) => { p.e = lerp(e0, eT, k); p.open = lerp(o0, openT, k); } });
+}
+const _hingeTmp = new THREE.Vector3();
+function applyPartTransforms() {
+  for (const p of partList) {
+    for (const pc of p.pieces) {
+      pc.root.position.copy(pc.base).addScaledVector(pc.explode, p.e);
+      if (pc.hinge) { const amt = clamp(Math.max(p.open, p.e * 2.2), 0, 1); pc.root.rotation.z = pc.hinge.sign * pc.hinge.angle * amt; }
+    }
+    for (const s of p.spins) s.rotation.z = s.userData.spool === 'n1' ? state.angleN1 : state.angleN2;
+  }
+}
+function explodeExtent() { let m = 0; for (const p of partList) m = Math.max(m, p.e); return m; }
+
+/* =====================================================================
+   14. CAMERA FLIGHTS
+   ===================================================================== */
+let camTween = null;
+function flyTo(cam, dur = CONFIG.anim.camDur) {
+  if (camTween) camTween.dead = true;
+  const fromT = controls.target.clone(), toT = v3(cam.target);
+  const s0 = new THREE.Spherical().setFromVector3(camera.position.clone().sub(fromT));
+  const s1 = new THREE.Spherical().setFromVector3(v3(cam.pos).sub(toT));
+  let dTh = s1.theta - s0.theta; if (dTh > Math.PI) dTh -= TAU; if (dTh < -Math.PI) dTh += TAU;
+  const sp = new THREE.Spherical();
+  camTween = tween({ dur: dur * animScale(), ease: Ease.inOutQuart, update: (k) => {
+    controls.target.lerpVectors(fromT, toT, k);
+    sp.set(lerp(s0.radius, s1.radius, k) * (1 + 0.08 * Math.sin(Math.PI * k)), lerp(s0.phi, s1.phi, k), s0.theta + dTh * k);
+    camera.position.setFromSpherical(sp).add(controls.target);
+  }, done: () => { camTween = null; } });
+}
+const _box = new THREE.Box3(), _sz = new THREE.Vector3(), _ctr = new THREE.Vector3();
+function focusPart(p) {
+  if (!p) return;
+  _box.makeEmpty(); for (const pc of p.pieces) if (pc.root.visible) _box.expandByObject(pc.root);
+  if (_box.isEmpty()) return;
+  _box.getCenter(_ctr); _box.getSize(_sz);
+  const radius = Math.max(0.25, _sz.length() * 0.5);
+  const dist = clamp(radius / Math.sin(rad(camera.fov) / 2) * 0.85, 1.2, 18);
+  const dir = camera.position.clone().sub(controls.target).normalize();
+  flyTo({ target: _ctr.toArray(), pos: _ctr.clone().addScaledVector(dir, dist).toArray() }, 1.2);
+}
+
+/* =====================================================================
+   15. MODES: cutaway, x-ray, isolate, airflow, run
+   ===================================================================== */
+let cutTween = null;
+function setCutaway(on, instant) {
+  state.cutTarget = on ? 1 : 0; $('tCut').classList.toggle('on', on);
+  if (cutTween) cutTween.dead = true;
+  const c0 = state.cut;
+  if (instant) { state.cut = state.cutTarget; Airflow.setCutMode(on); return; }
+  cutTween = tween({ dur: CONFIG.anim.cutDur * animScale(), ease: Ease.inOutCubic, update: (k) => { state.cut = lerp(c0, state.cutTarget, k); } });
+  Airflow.setCutMode(on);
+  if (state.ready) Sound.whoosh(0.6, on);
+  caption(on ? 'Cutaway on — section planes reveal the interior' : 'Cutaway off');
+}
+function applyCut() { const off = (1 - state.cut) * 1.6; cutPlanes[0].constant = off; cutPlanes[1].constant = off; cutUniform.value.set(off, off, state.cut > 0.01 ? 1 : 0); }
+const cutActive = () => state.cut > 0.02;
+const isClipped = (p) => p.x < -cutPlanes[0].constant && p.y > cutPlanes[1].constant;
+
+function applyGhosts() {
+  for (const p of partList) {
+    const g = (state.isolated && p !== state.isolated) || (state.xray && p.meta.shell && p !== state.selected && p !== state.isolated);
+    p.ghost = !!g;
+    for (const m of p.meshes) {
+      if (m.material === flameMat) continue;
+      m.material = g ? (p.meta.clip ? GHOST.clip : GHOST.plain) : m.userData.mat;
+      m.castShadow = !g;
+    }
+  }
+  $('tXray').classList.toggle('on', state.xray);
+  $('btnIsolate').classList.toggle('on', !!state.isolated);
+  $('btnIsolate').textContent = state.isolated ? 'Show all' : 'Isolate';
+}
+function setXray(on) { state.xray = on; applyGhosts(); caption(on ? 'X-ray view — casings rendered transparent' : 'X-ray off'); }
+function setIsolate(p) { state.isolated = p; applyGhosts(); if (p) focusPart(p); }
+function setAirflow(on) {
+  state.airflow = on; $('tFlow').classList.toggle('on', on);
+  if (on) { if (!state.running) setRunning(true); if (state.cutTarget < 0.5 && !state.xray) setCutaway(true); Airflow.setCutMode(state.cutTarget > 0.5); }
+}
+function setRunning(on) {
+  state.running = on; $('tRun').classList.toggle('on', on); $('gauges').classList.toggle('hidden', !on);
+  if (on) { Sound.init(); caption('Engine start — starter motoring N2, light-off at 25% N2'); }
+  else { caption('Fuel cut-off — engine spooling down'); if (state.airflow) { state.airflow = false; $('tFlow').classList.remove('on'); } }
+}
+function setThrottle(v) { state.throttle = clamp(v, 0, 1); const el = $('throttle'); el.value = Math.round(state.throttle * 100); setRangeFill(el); }
+
+/* =====================================================================
+   16. STEP / STORY CONTROLLER
+   ===================================================================== */
+function goStep(i, { instant = false } = {}) {
+  i = clamp(i, 0, LAST); const prev = state.step; state.step = i; const S = STEPS[i];
+  state.explodeManual = null;
+  // Explode/collapse targets, choreographed in story order
+  const moving = [];
+  for (const p of partList) {
+    const eT = (i < LAST && p.meta.stage != null && p.meta.stage <= i) ? 1 : 0;
+    const oT = (p.meta.open && i >= 1 && i < LAST) ? 1 : 0;
+    if (Math.abs(p.e - eT) > 1e-3 || Math.abs(p.open - oT) > 1e-3) moving.push({ p, eT, oT });
+  }
+  const collapsing = i < prev;
+  const order = (m) => { const st = m.p.meta.stage ?? 0; const s = STEPS[st] && STEPS[st].seq ? STEPS[st].seq.indexOf(m.p.id) : 0; return st * 10 + Math.max(0, s); };
+  moving.sort((a, b) => (collapsing ? order(b) - order(a) : order(a) - order(b)));
+  const stg = moving.length > 6 ? Math.min(CONFIG.anim.stagger, 1.6 / moving.length) : CONFIG.anim.stagger;
+  moving.forEach((m, k) => { if (instant) { if (m.p.tw) m.p.tw.dead = true; m.p.e = m.eT; m.p.open = m.oT; } else animatePart(m.p, m.eT, m.oT, k * stg + (m.p.meta.stage === i || collapsing ? 0.15 : 0)); });
+  if (moving.length && !instant && state.ready) Sound.whoosh(0.9, !collapsing);
+  // modes
+  if (state.isolated) { state.isolated = null; }
+  if (state.xray) state.xray = false;
+  applyGhosts();
+  if ((state.cutTarget > 0.5) !== !!S.cutaway) setCutaway(!!S.cutaway, instant);
+  if (S.running && !state.running) { setRunning(true); setThrottle(0.62); }
+  if (!S.running && state.running && prev === LAST) setRunning(false);
+  if ((S.airflow !== undefined || prev === LAST) && state.airflow !== !!S.airflow) setAirflow(!!S.airflow);
+  for (const p of partList) { if (p.hidden) { p.hidden = false; for (const pc of p.pieces) pc.root.visible = true; } }
+  refreshPartList();
+  // camera
+  if (instant) { if (camTween) { camTween.dead = true; camTween = null; } camera.position.copy(v3(S.cam.pos)); controls.target.copy(v3(S.cam.target)); } else flyTo(S.cam);
+  // UI
+  $('stepNum').textContent = String(i + 1).padStart(2, '0') + ' / ' + String(STEPS.length).padStart(2, '0');
+  $('stepChip').textContent = S.chip; $('stepTitle').textContent = S.title; $('stepText').textContent = S.text;
+  $('nextLbl').textContent = i === LAST ? 'Restart' : 'Next';
+  [...$('stepDots').children].forEach((d, k) => { d.classList.toggle('cur', k === i); d.classList.toggle('done', k < i); });
+  const ex = $('explode'); const frac = i === LAST ? 0 : clamp(partList.filter((p) => p.meta.stage != null && p.meta.stage <= i).length / partList.filter((p) => p.meta.stage != null).length, 0, 1); ex.value = Math.round(frac * 100); $('explodeVal').textContent = ex.value + '%'; setRangeFill(ex);
+  if (state.selected && !S.focus.includes(state.selected.id)) select(null);
+  state.autoT = 0;
+  if (state.ready) Sound.blip(660, 0.06);
+}
+function setManualExplode(v) {
+  state.explodeManual = v;
+  for (const p of partList) { if (p.meta.stage == null) continue; animatePart(p, v, p.meta.open ? (v > 0.001 ? 1 : 0) : 0, 0, 0.35); }
+  if (v > 0.02 && state.cutTarget > 0.5) setCutaway(false);
+  if (v > 0.5 && camera.position.distanceTo(controls.target) < 9) flyTo(STEPS[9].cam, 1.4);
+}
+
+/* =====================================================================
+   17. INTERACTION: picking, hover, selection, labels
+   ===================================================================== */
+const raycaster = new THREE.Raycaster(); const ndc = new THREE.Vector2();
+const pointer = { x: 0, y: 0, moved: false, down: false, downX: 0, downY: 0, downT: 0, dragging: false, inside: false, lastTapT: 0, lastTapPart: null };
+function pick(cx, cy) {
+  ndc.set(cx / innerWidth * 2 - 1, -(cy / innerHeight) * 2 + 1);
+  raycaster.setFromCamera(ndc, camera);
+  const hits = raycaster.intersectObjects(pickables, false);
+  for (const h of hits) {
+    const o = h.object, p = o.userData.part;
+    if (!p || p.hidden || p.ghost || o.userData.noPick || !o.visible) continue;
+    let vis = true; o.traverseAncestors((a) => { if (!a.visible) vis = false; }); if (!vis) continue;
+    if (p.meta.clip && cutActive() && isClipped(h.point)) continue;
+    return p;
+  }
+  return null;
+}
+const tipEl = $('tip');
+function setHover(p) {
+  if (state.hovered === p) return;
+  if (state.hovered) state.hovered.hoverT = 0;
+  state.hovered = p; if (p) p.hoverT = 1;
+  canvas.style.cursor = p ? 'pointer' : 'grab';
+  if (p) { tipEl.querySelector('b').textContent = p.meta.name; tipEl.querySelector('span').textContent = p.meta.module + ' · click for details'; tipEl.style.opacity = 1; }
+  else tipEl.style.opacity = 0;
+  highlightListItem(p, 'hover');
+}
+function select(p) {
+  if (state.selected === p) { if (p) focusPart(p); return; }
+  state.selected = p;
+  outlinePass.selectedObjects = p ? p.pieces.map((pc) => pc.root) : [];
+  const info = $('info');
+  if (p) {
+    $('infoModule').textContent = p.meta.module; $('infoModule').style.background = MODULE_COLORS[p.meta.module] + '22'; $('infoModule').style.color = MODULE_COLORS[p.meta.module];
+    $('infoTitle').textContent = p.meta.name; $('infoDesc').textContent = p.meta.desc; $('infoPrinciple').textContent = p.meta.principle;
+    $('infoSpecs').innerHTML = p.meta.specs.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+    $('btnHide').textContent = 'Hide';
+    info.classList.remove('hidden'); info.scrollTop = 0;
+    Sound.blip(990, 0.05);
+  } else info.classList.add('hidden');
+  if (state.xray) applyGhosts();
+  refreshPartList();
+}
+
+// Labels: contextual (current step focus), all (toggle), and thermodynamic stations
+const labelsEl = $('labels'); const labelEls = new Map(); const stationEls = [];
+function makeLabel(text, sub, cls = '') {
+  const el = document.createElement('div'); el.className = 'lbl ' + cls;
+  el.innerHTML = `<div class="stem"></div><div class="pin"></div><div class="card">${text}${sub ? `<small>${sub}</small>` : ''}</div>`;
+  labelsEl.appendChild(el); return el;
+}
+function buildLabels() {
+  for (const p of partList) {
+    if (!p.anchor) continue;
+    const el = makeLabel(p.meta.name, p.meta.module, p.meta.down ? 'down' : ''); el.style.setProperty('--stem', (p.meta.down ? 28 : 34) + 'px'); el.style.opacity = 0;
+    el.querySelector('.card').addEventListener('click', (e) => { e.stopPropagation(); select(p); });
+    labelEls.set(p, el);
+  }
+  for (const s of STATIONS) { const el = makeLabel(`Station ${s.n} · ${s.t}`, s.v, 'station' + (s.cold ? ' coldS' : '') + (s.down ? ' down' : '')); el.style.setProperty('--stem', s.h + 'px'); el.style.opacity = 0; el.userData = { pos: P(s.r, rad(132), s.z) }; stationEls.push(el); }
+}
+const _lv = new THREE.Vector3();
+function updateLabels() {
+  const showAll = state.labels, focus = STEPS[state.step].focus, w = innerWidth, h = innerHeight;
+  for (const [p, el] of labelEls) {
+    const want = (showAll && p.meta.label) || focus.includes(p.id);
+    const vis = want && !p.hidden && !p.ghost && state.cut < 0.5 + (p.meta.clip ? 0 : 0.6);
+    if (!vis) { if (el.style.opacity !== '0') el.style.opacity = 0; continue; }
+    const pc = p.pieces[0]; _lv.copy(p.anchor).applyMatrix4(pc.root.matrixWorld).project(camera);
+    if (_lv.z > 1) { el.style.opacity = 0; continue; }
+    el.style.opacity = 1; el.style.transform = `translate(${((_lv.x + 1) / 2 * w).toFixed(1)}px, ${((1 - _lv.y) / 2 * h).toFixed(1)}px)`;
+  }
+  const st = STEPS[state.step].stations && state.cut > 0.9;
+  for (const el of stationEls) {
+    if (!st) { if (el.style.opacity !== '0') el.style.opacity = 0; continue; }
+    _lv.copy(el.userData.pos).project(camera);
+    if (_lv.z > 1) { el.style.opacity = 0; continue; }
+    el.style.opacity = 1; el.style.transform = `translate(${((_lv.x + 1) / 2 * w).toFixed(1)}px, ${((1 - _lv.y) / 2 * h).toFixed(1)}px)`;
+  }
+}
+
+/* =====================================================================
+   18. UI WIRING
+   ===================================================================== */
+function setRangeFill(el) { const p = (el.value - el.min) / (el.max - el.min) * 100; el.style.setProperty('--p', p + '%'); }
+let captionTimer = 0;
+function caption(text) {
+  if (!settings.captions || !state.ready) return;
+  const tip = $('ctxHint'); tip.innerHTML = `<span>🔊 ${text}</span>`; clearTimeout(captionTimer);
+  captionTimer = setTimeout(() => { tip.innerHTML = '<span><kbd>Click</kbd> inspect</span><span><kbd>Dbl-click</kbd> focus</span><span><kbd>Drag</kbd> orbit</span>'; }, 3200);
+}
+function buildStepDots() {
+  const wrap = $('stepDots');
+  STEPS.forEach((s, i) => { const b = document.createElement('button'); b.setAttribute('aria-label', `Step ${i + 1}: ${s.title}`); b.title = s.title; b.addEventListener('click', () => { stopAutoplay(); goStep(i); }); wrap.appendChild(b); });
+}
+const EYE = '<svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/></svg>';
+const EYE_OFF = '<svg viewBox="0 0 24 24"><path d="M3 3l18 18M10.6 5.1A10 10 0 0 1 12 5c6.4 0 10 7 10 7a17 17 0 0 1-3.1 3.9M6.6 6.6A17 17 0 0 0 2 12s3.6 7 10 7a9.6 9.6 0 0 0 5.4-1.6"/></svg>';
+const listItems = new Map();
+function buildPartList() {
+  const order = ['Nacelle', 'Fan module', 'Core module', 'Hot section', 'Turbine', 'Exhaust', 'Systems'];
+  const wrap = $('partList');
+  for (const mod of order) {
+    const ps = partList.filter((p) => p.meta.module === mod); if (!ps.length) continue;
+    const g = document.createElement('div'); g.className = 'grp'; g.textContent = mod; wrap.appendChild(g);
+    for (const p of ps) {
+      const it = document.createElement('div'); it.className = 'pitem';
+      it.innerHTML = `<span class="dot" style="background:${MODULE_COLORS[mod]}"></span><span class="nm">${p.meta.name}</span><button class="eye" aria-label="Toggle visibility">${EYE}</button>`;
+      it.addEventListener('click', () => { select(p); focusPart(p); });
+      it.addEventListener('mouseenter', () => { p.hoverT = 1; });
+      it.addEventListener('mouseleave', () => { if (state.hovered !== p) p.hoverT = 0; });
+      it.querySelector('.eye').addEventListener('click', (e) => { e.stopPropagation(); toggleHidden(p); });
+      wrap.appendChild(it); listItems.set(p, it);
+    }
+  }
+  $('partCount').textContent = partList.length + ' parts';
+}
+function refreshPartList() { for (const [p, it] of listItems) { it.classList.toggle('sel', p === state.selected); it.classList.toggle('off', p.hidden); it.querySelector('.eye').innerHTML = p.hidden ? EYE_OFF : EYE; } }
+function highlightListItem() { /* hover feedback handled in 3D */ }
+function toggleHidden(p) {
+  p.hidden = !p.hidden; for (const pc of p.pieces) pc.root.visible = !p.hidden;
+  if (p.hidden && state.selected === p) select(null);
+  refreshPartList(); Sound.blip(p.hidden ? 520 : 760, 0.05);
+}
+function stopAutoplay() { state.autoplay = false; $('playIco').innerHTML = '<path d="M7 5l12 7-12 7z"/>'; }
+function toggleAutoplay() { state.autoplay = !state.autoplay; state.autoT = 0; $('playIco').innerHTML = state.autoplay ? '<path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z"/>' : '<path d="M7 5l12 7-12 7z"/>'; if (state.autoplay && state.step === LAST) goStep(0); }
+function next() { goStep(state.step === LAST ? 0 : state.step + 1); }
+function prev() { goStep(state.step - 1); }
+function resetView() { flyTo(STEPS[state.step].cam); }
+function toggleModal(id, show) { const m = $(id); const s = show ?? m.classList.contains('hidden'); m.classList.toggle('hidden', !s); if (s) Sound.blip(720, 0.05); }
+
+function wireUI() {
+  buildStepDots(); buildPartList();
+  $('nextBtn').addEventListener('click', () => { stopAutoplay(); next(); });
+  $('prevBtn').addEventListener('click', () => { stopAutoplay(); prev(); });
+  $('playBtn').addEventListener('click', toggleAutoplay);
+  $('tCut').addEventListener('click', () => setCutaway(state.cutTarget < 0.5));
+  $('tXray').addEventListener('click', () => setXray(!state.xray));
+  $('tFlow').addEventListener('click', () => setAirflow(!state.airflow));
+  $('tRun').addEventListener('click', () => setRunning(!state.running));
+  $('tLabels').addEventListener('click', () => { state.labels = !state.labels; $('tLabels').classList.toggle('on', state.labels); });
+  $('tReset').addEventListener('click', resetView);
+  $('btnParts').addEventListener('click', () => { const d = $('drawer'); d.classList.toggle('hidden'); $('btnParts').classList.toggle('on', !d.classList.contains('hidden')); });
+  $('btnHelp').addEventListener('click', () => toggleModal('helpModal', true));
+  $('hClose').addEventListener('click', () => toggleModal('helpModal', false));
+  $('btnSettings').addEventListener('click', () => toggleModal('settingsModal', true));
+  $('sClose').addEventListener('click', () => toggleModal('settingsModal', false));
+  for (const id of ['helpModal', 'settingsModal']) $(id).addEventListener('click', (e) => { if (e.target.id === id) toggleModal(id, false); });
+  $('btnFull').addEventListener('click', toggleFullscreen);
+  $('infoClose').addEventListener('click', () => select(null));
+  $('btnFocus').addEventListener('click', () => focusPart(state.selected));
+  $('btnIsolate').addEventListener('click', () => setIsolate(state.isolated ? null : state.selected));
+  $('btnHide').addEventListener('click', () => { if (state.selected) toggleHidden(state.selected); });
+  const ex = $('explode');
+  ex.addEventListener('input', () => { stopAutoplay(); const v = ex.value / 100; $('explodeVal').textContent = ex.value + '%'; setRangeFill(ex); setManualExplode(v); });
+  const th = $('throttle');
+  th.addEventListener('input', () => { state.throttle = th.value / 100; setRangeFill(th); });
+  setRangeFill(ex); setRangeFill(th);
+  wireSettings();
+}
+function toggleFullscreen() {
+  const d = document;
+  if (!d.fullscreenElement && !d.webkitFullscreenElement) { const el = d.documentElement; (el.requestFullscreen || el.webkitRequestFullscreen || (() => {})).call(el); }
+  else (d.exitFullscreen || d.webkitExitFullscreen || (() => {})).call(d);
+}
+
+// Settings panel
+function wireSettings() {
+  const seg = $('qualitySeg');
+  seg.querySelectorAll('button').forEach((b) => b.addEventListener('click', () => { settings.quality = b.dataset.q; settings.shadows = PRESETS[b.dataset.q].shadows; settings.bloom = PRESETS[b.dataset.q].bloom; applyQuality(); saveSettings(); syncSettingsUI(); }));
+  const bindRange = (id, out, key, fmt, apply) => { const el = $(id); el.addEventListener('input', () => { settings[key] = +el.value; $(out).textContent = fmt(+el.value); setRangeFill(el); apply && apply(); saveSettings(); }); };
+  bindRange('sRes', 'oRes', 'resScale', (v) => v + '%', resize);
+  bindRange('sFov', 'oFov', 'fov', (v) => v + '°', () => { camera.fov = settings.fov; camera.updateProjectionMatrix(); resize(); });
+  bindRange('sSens', 'oSens', 'sens', (v) => (v / 100).toFixed(1) + '×', applyControlsSettings);
+  bindRange('sVol', 'oVol', 'vol', (v) => String(v), () => Sound.applyVolumes());
+  bindRange('sEngVol', 'oEngVol', 'engVol', (v) => String(v), () => Sound.applyVolumes());
+  bindRange('sUiVol', 'oUiVol', 'uiVol', (v) => String(v), () => { Sound.applyVolumes(); Sound.blip(880, 0.05); });
+  const bindSw = (id, key, apply) => $(id).addEventListener('click', () => { settings[key] = !settings[key]; $(id).classList.toggle('on', settings[key]); apply && apply(); saveSettings(); });
+  bindSw('sDyn', 'dynRes', () => { state.dynScale = 1; resize(); });
+  bindSw('sShadows', 'shadows', applyQuality);
+  bindSw('sBloom', 'bloom', applyQuality);
+  bindSw('sInvert', 'invertY', applyControlsSettings);
+  bindSw('sAuto', 'autoRotate');
+  bindSw('sReduced', 'reducedMotion');
+  bindSw('sCaptions', 'captions');
+  $('sReset').addEventListener('click', () => { const q = detectQuality(); settings = { ...DEFAULT_SETTINGS, quality: q, shadows: PRESETS[q].shadows, bloom: PRESETS[q].bloom }; saveSettings(); applyQuality(); applyControlsSettings(); camera.fov = settings.fov; camera.updateProjectionMatrix(); resize(); Sound.applyVolumes(); syncSettingsUI(); });
+  syncSettingsUI();
+}
+function syncSettingsUI() {
+  $('qualitySeg').querySelectorAll('button').forEach((b) => b.classList.toggle('on', b.dataset.q === settings.quality));
+  const setR = (id, out, v, f) => { $(id).value = v; $(out).textContent = f(v); setRangeFill($(id)); };
+  setR('sRes', 'oRes', settings.resScale, (v) => v + '%'); setR('sFov', 'oFov', settings.fov, (v) => v + '°'); setR('sSens', 'oSens', settings.sens, (v) => (v / 100).toFixed(1) + '×');
+  setR('sVol', 'oVol', settings.vol, String); setR('sEngVol', 'oEngVol', settings.engVol, String); setR('sUiVol', 'oUiVol', settings.uiVol, String);
+  for (const [id, k] of [['sDyn', 'dynRes'], ['sShadows', 'shadows'], ['sBloom', 'bloom'], ['sInvert', 'invertY'], ['sAuto', 'autoRotate'], ['sReduced', 'reducedMotion'], ['sCaptions', 'captions']]) $(id).classList.toggle('on', !!settings[k]);
+}
+function applyControlsSettings() {
+  controls.rotateSpeed = CONFIG.orbit.rotateSpeed * settings.sens / 100;
+  // OrbitControls has no invert option: emulate by flipping vertical drag via a pointer handler hook
+  invertY = settings.invertY;
+}
+let invertY = false;
+
+function detectQuality() {
+  let q = 'high';
+  try {
+    const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
+    const gpu = ext ? String(gl.getParameter(ext.UNMASKED_RENDERER_WEBGL)) : '';
+    if (/swiftshader|llvmpipe|software/i.test(gpu)) q = 'low';
+    else if (/intel|uhd|iris|mali|adreno|powervr|apple m1(?! (pro|max))/i.test(gpu)) q = 'medium';
+    else if (/rtx (30|40|50)[6-9]0|rx (6[89]|7[89])|apple m[1-4] (pro|max|ultra)/i.test(gpu)) q = 'ultra';
+  } catch (e) { /* default */ }
+  if (/Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) q = 'low';
+  return q;
+}
+function applyQuality() {
+  const pr = PRESETS[settings.quality] || PRESETS.high;
+  keyLight.castShadow = settings.shadows && pr.shadows;
+  if (keyLight.shadow.mapSize.x !== pr.shadowSize) { keyLight.shadow.mapSize.set(pr.shadowSize, pr.shadowSize); if (keyLight.shadow.map) { keyLight.shadow.map.dispose(); keyLight.shadow.map = null; } }
+  bloomPass.enabled = settings.bloom && pr.bloom;
+  for (const rt of [composer.renderTarget1, composer.renderTarget2]) { if (rt.samples !== pr.msaa) { rt.samples = pr.msaa; rt.dispose(); } }
+  Airflow.setCount(pr.particles);
+  state.dynScale = 1; resize();
+}
+
+/* =====================================================================
+   19. INPUT: pointer, keyboard, gamepad
+   ===================================================================== */
+function onPointerDown(e) {
+  Sound.init(); state.lastInteract = performance.now(); state.lastInput = 'kbm';
+  pointer.down = true; pointer.downX = e.clientX; pointer.downY = e.clientY; pointer.downT = performance.now(); pointer.dragging = false;
+  if (camTween && e.button === 0) { camTween.dead = true; camTween = null; }
+  canvas.style.cursor = 'grabbing';
+}
+function onPointerMove(e) {
+  pointer.x = e.clientX; pointer.y = e.clientY; pointer.moved = true; pointer.inside = true;
+  if (pointer.down && Math.hypot(e.clientX - pointer.downX, e.clientY - pointer.downY) > 5) pointer.dragging = true;
+  tipEl.style.transform = `translate(${e.clientX + 16}px, ${e.clientY + 14}px)`;
+}
+function onPointerUp(e) {
+  const wasDrag = pointer.dragging; pointer.down = false; pointer.dragging = false;
+  canvas.style.cursor = state.hovered ? 'pointer' : 'grab';
+  if (wasDrag || performance.now() - pointer.downT > 450 || e.button !== 0) return;
+  const p = pick(e.clientX, e.clientY);
+  const now = performance.now();
+  if (e.pointerType === 'touch' && p && pointer.lastTapPart === p && now - pointer.lastTapT < 350) { focusPart(p); }
+  pointer.lastTapT = now; pointer.lastTapPart = p;
+  select(p);
+}
+canvas.addEventListener('pointerdown', onPointerDown);
+window.addEventListener('pointermove', onPointerMove);
+window.addEventListener('pointerup', onPointerUp);
+canvas.addEventListener('pointerleave', () => { pointer.inside = false; setHover(null); });
+canvas.addEventListener('dblclick', (e) => { const p = pick(e.clientX, e.clientY); if (p) { select(p); focusPart(p); } });
+canvas.addEventListener('wheel', () => { state.lastInteract = performance.now(); if (camTween) { camTween.dead = true; camTween = null; } }, { passive: true });
+canvas.addEventListener('contextmenu', (e) => e.preventDefault());
+// Invert-Y: mirror vertical pointer delta for orbit drags by flipping the polar change after OrbitControls applies it.
+let _lastPolar = null;
+controls.addEventListener('start', () => { state.lastInteract = performance.now(); _lastPolar = controls.getPolarAngle(); stopAutoplay(); });
+controls.addEventListener('change', () => {
+  if (!invertY || !pointer.down || _lastPolar == null) return;
+  const cur = controls.getPolarAngle(), d = cur - _lastPolar; if (Math.abs(d) < 1e-6) return;
+  const off = camera.position.clone().sub(controls.target), sp = new THREE.Spherical().setFromVector3(off);
+  sp.phi = clamp(_lastPolar - d, 0.05, controls.maxPolarAngle); camera.position.setFromSpherical(sp).add(controls.target); _lastPolar = sp.phi;
+});
+
+window.addEventListener('keydown', (e) => {
+  if (e.target && (e.target.tagName === 'INPUT' && e.target.type !== 'range')) return;
+  state.lastInput = 'kbm'; state.lastInteract = performance.now(); Sound.init();
+  const k = e.key;
+  if (k === 'ArrowRight' || k === 'PageDown') { stopAutoplay(); next(); e.preventDefault(); }
+  else if (k === 'ArrowLeft' || k === 'PageUp') { stopAutoplay(); prev(); e.preventDefault(); }
+  else if (k === 'ArrowUp' && state.running) { setThrottle(state.throttle + 0.05); e.preventDefault(); }
+  else if (k === 'ArrowDown' && state.running) { setThrottle(state.throttle - 0.05); e.preventDefault(); }
+  else if (k === ' ') { toggleAutoplay(); e.preventDefault(); }
+  else if (k === 'e' || k === 'E') { const v = explodeExtent() > 0.5 ? 0 : 1; const ex = $('explode'); ex.value = v * 100; $('explodeVal').textContent = ex.value + '%'; setRangeFill(ex); setManualExplode(v); }
+  else if (k === 'c' || k === 'C') setCutaway(state.cutTarget < 0.5);
+  else if (k === 'x' || k === 'X') setXray(!state.xray);
+  else if (k === 'a' || k === 'A') setAirflow(!state.airflow);
+  else if (k === 'r' || k === 'R') setRunning(!state.running);
+  else if (k === 'l' || k === 'L') $('tLabels').click();
+  else if (k === 'p' || k === 'P') $('btnParts').click();
+  else if (k === 'f' || k === 'F') focusPart(state.selected);
+  else if (k === 'i' || k === 'I') setIsolate(state.isolated ? null : state.selected);
+  else if (k === 'h' || k === 'H' || k === '?') toggleModal('helpModal');
+  else if (k === 'u' || k === 'U') document.body.classList.toggle('noui');
+  else if (k === 'Home') resetView();
+  else if (k === 'Escape') { if (!$('helpModal').classList.contains('hidden')) toggleModal('helpModal', false); else if (!$('settingsModal').classList.contains('hidden')) toggleModal('settingsModal', false); else if (state.isolated) setIsolate(null); else select(null); }
+  else if (k === 'F3' || k === '`') { toggleDebug(); e.preventDefault(); }
+});
+
+const pad = { prevButtons: [] };
+function pollGamepad(dt) {
+  let gps = [];
+  try { gps = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { return; } const gp = gps && [...gps].find((g) => g && g.connected); if (!gp) return;
+  const dz = (v) => (Math.abs(v) < 0.15 ? 0 : v);
+  const lx = dz(gp.axes[0] || 0), ly = dz(gp.axes[1] || 0), ry = dz(gp.axes[3] || 0);
+  const pressed = gp.buttons.map((b) => b.pressed), was = (i) => pad.prevButtons[i];
+  if (lx || ly || ry || pressed.some(Boolean)) { state.lastInput = 'pad'; state.lastInteract = performance.now(); }
+  if (lx || ly || ry) {
+    if (camTween) { camTween.dead = true; camTween = null; }
+    const off = camera.position.clone().sub(controls.target), sp = new THREE.Spherical().setFromVector3(off);
+    sp.theta -= lx * 1.8 * dt; sp.phi = clamp(sp.phi + ly * 1.4 * dt * (settings.invertY ? -1 : 1), 0.1, controls.maxPolarAngle);
+    sp.radius = clamp(sp.radius * (1 + ry * 1.2 * dt), controls.minDistance, controls.maxDistance);
+    camera.position.setFromSpherical(sp).add(controls.target);
+  }
+  const edge = (i) => pressed[i] && !was(i);
+  if (edge(0) || edge(5)) next(); if (edge(1) || edge(4)) prev(); if (edge(2)) setCutaway(state.cutTarget < 0.5); if (edge(3)) setRunning(!state.running);
+  if (edge(9)) toggleModal('helpModal');
+  if (state.running) { const rt = gp.buttons[7] ? gp.buttons[7].value : 0, lt = gp.buttons[6] ? gp.buttons[6].value : 0; if (rt > 0.05 || lt > 0.05) setThrottle(state.throttle + (rt - lt) * dt * 0.6); }
+  pad.prevButtons = pressed;
+}
+
+/* =====================================================================
+   20. RESIZE, VISIBILITY, DEBUG
+   ===================================================================== */
+function resize() {
+  const w = innerWidth, h = innerHeight, pr = PRESETS[settings.quality] || PRESETS.high;
+  const ratio = Math.min(devicePixelRatio || 1, pr.maxDpr) * (settings.resScale / 100) * (settings.dynRes ? state.dynScale : 1);
+  renderer.setPixelRatio(ratio); renderer.setSize(w, h, false);
+  composer.setPixelRatio(ratio); composer.setSize(w, h);
+  camera.aspect = w / h; camera.setViewOffset(w, h, 0, Math.round(h * 0.065), w, h); camera.updateProjectionMatrix();
+  Airflow.setScale(h * ratio / (2 * Math.tan(rad(camera.fov) / 2)));
+}
+window.addEventListener('resize', resize);
+let paused = false;
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) { paused = true; renderer.setAnimationLoop(null); Sound.suspend(); }
+  else { paused = false; lastT = performance.now(); if (state.ready) renderer.setAnimationLoop(loop); Sound.resume(); }
+});
+window.addEventListener('blur', () => { stopAutoplay(); if (Sound.ctx && state.running) Sound.suspend(); });
+window.addEventListener('focus', () => Sound.resume());
+
+let debugOn = false, gui = null;
+async function toggleDebug() {
+  debugOn = !debugOn; $('dbg').style.display = debugOn ? 'block' : 'none';
+  if (debugOn && !gui) {
+    try {
+      const { default: GUI } = await import('https://cdn.jsdelivr.net/npm/lil-gui@0.20.0/dist/lil-gui.esm.min.js');
+      gui = new GUI({ title: 'TF-9 tweaks' });
+      const r = CONFIG.render;
+      gui.add(r, 'exposure', 0.4, 2, 0.01).onChange((v) => { renderer.toneMappingExposure = v; });
+      gui.add(r, 'envIntensity', 0, 3, 0.01).onChange((v) => { scene.environmentIntensity = v; });
+      gui.add(r, 'bloomStrength', 0, 2, 0.01).onChange((v) => { bloomPass.strength = v; });
+      gui.add(r, 'bloomThreshold', 0, 3, 0.01).onChange((v) => { bloomPass.threshold = v; });
+      gui.add(keyLight, 'intensity', 0, 6, 0.01).name('key light');
+      gui.add(CONFIG.spool, 'n1Vis', 0, 20, 0.1).name('N1 visual rad/s');
+      gui.add(CONFIG.spool, 'n2Vis', 0, 25, 0.1).name('N2 visual rad/s');
+      gui.add(CONFIG.anim, 'partDur', 0.2, 3, 0.05).name('part anim (s)');
+      gui.add(CONFIG.anim, 'camDur', 0.3, 4, 0.05).name('camera anim (s)');
+    } catch (e) { console.warn('lil-gui unavailable', e); }
+  }
+  if (gui) gui.domElement.style.display = debugOn ? '' : 'none';
+}
+
+/* =====================================================================
+   21. MAIN LOOP
+   ===================================================================== */
+let lastT = performance.now(), fpsAcc = 0, fpsFrames = 0, fps = 60, dynAcc = 0, dynFrames = 0, hoverFrame = 0;
+const ACCENT = new THREE.Color(CONFIG.accent), HEAT = new THREE.Color(CONFIG.heat), _col = new THREE.Color();
+const setGauge = (id, frac) => { $(id).setAttribute('stroke-dasharray', `${(103.7 * clamp(frac, 0, 1)).toFixed(1)} 138.2`); };
+let gaugeT = 0;
+function loop() {
+  const now = performance.now(); const dt = Math.min(0.05, (now - lastT) / 1000); lastT = now; const t = now / 1000;
+  renderer.info.reset();
+  updateTweens(dt);
+  pollGamepad(dt);
+
+  // Engine spool dynamics
+  const thr = state.throttle;
+  const n1T = state.running ? 0.22 + 0.78 * thr : 0, n2T = state.running ? 0.6 + 0.4 * thr : 0;
+  const r1 = state.running ? CONFIG.spool.upRate1 : CONFIG.spool.downRate, r2 = state.running ? CONFIG.spool.upRate2 : CONFIG.spool.downRate;
+  state.n2 += (n2T - state.n2) * (1 - Math.exp(-dt * r2));
+  state.n1 += ((state.n2 > 0.3 || !state.running ? n1T : 0.05) - state.n1) * (1 - Math.exp(-dt * r1));
+  const lit = state.running && state.n2 > 0.25 ? 1 : 0;
+  state.flame += ((lit ? 0.35 + 0.65 * thr : 0) - state.flame) * (1 - Math.exp(-dt * 3));
+  state.angleN1 += (state.n1 * CONFIG.spool.n1Vis + CONFIG.spool.windmill * (1 - Math.min(1, state.n1 * 5))) * dt;
+  state.angleN2 += (state.n2 * CONFIG.spool.n2Vis + CONFIG.spool.windmill * 0.6 * (1 - Math.min(1, state.n2 * 5))) * dt;
+  Sound.engine(state.n1, state.n2, state.flame);
+  if (flameMat) { flameMat.uniforms.uTime.value = t; flameMat.uniforms.uIntensity.value = state.flame * (0.9 + 0.1 * Math.sin(t * 37) * Math.sin(t * 23)); }
+  combustorLight.intensity = state.flame * 7 * (0.9 + 0.1 * Math.sin(t * 31));
+  gaugeT -= dt;
+  if (state.running || state.n1 > 0.01) {
+    if (gaugeT <= 0) {
+      gaugeT = 0.1;
+      const egt = 15 + state.flame * 625 + 300 * state.flame * thr, thrust = 130 * Math.pow(clamp((state.n1 - 0.18) / 0.82, 0, 1), 1.8);
+      $('gN1').textContent = (state.n1 * 100).toFixed(0); $('gN2').textContent = (state.n2 * 100).toFixed(0); $('gEGT').textContent = egt.toFixed(0); $('gThr').textContent = thrust.toFixed(0);
+      setGauge('gaN1', state.n1); setGauge('gaN2', state.n2); setGauge('gaEGT', egt / 1060); setGauge('gaThr', thrust / 130);
+      $('thrLbl').textContent = thr < 0.12 ? 'IDLE' : thr < 0.55 ? 'CRUISE' : thr < 0.85 ? 'CLIMB' : 'TAKE-OFF';
+    }
+  }
+  Airflow.update(dt, Math.max(state.n1, 0.25), state.flame, state.airflow ? 1 : Math.max(0, Airflow.points.material.uniforms.uOpacity.value - dt * 2));
+
+  // Cutaway planes & part transforms
+  applyCut();
+  applyPartTransforms();
+  groupsRoot.updateMatrixWorld();
+  const ext = explodeExtent();
+  blob.scale.set(3.2 + ext * 1.6, 6.2 + ext * 7, 1); blob.material.opacity = 0.55 - ext * 0.15;
+
+  // Hover picking (throttled; skip while dragging)
+  if (pointer.moved && pointer.inside && !pointer.down && ++hoverFrame % 2 === 0) { pointer.moved = false; setHover(pick(pointer.x, pointer.y)); }
+  // Emissive feedback: hover, selection pulse, heat glow
+  for (const p of partList) {
+    p.hover += (p.hoverT - p.hover) * (1 - Math.exp(-dt * 14));
+    const hl = p.hover * 0.16 + (p === state.selected ? 0.07 + 0.05 * Math.sin(t * 3.2) : 0);
+    const glow = p.meta.glow ? p.meta.glow * state.flame : 0;
+    if (hl < 0.002 && glow < 0.002 && !p._emis) continue;
+    p._emis = hl >= 0.002 || glow >= 0.002;
+    for (const m of p.mats) { if (!m.emissive) continue; m.emissive.copy(ACCENT).multiplyScalar(hl); if (glow > 0) m.emissive.add(_col.copy(HEAT).multiplyScalar(glow)); }
+  }
+
+  // Auto-rotate when idle on the overview
+  controls.autoRotate = settings.autoRotate && !settings.reducedMotion && state.step === 0 && !state.selected && !camTween && now - state.lastInteract > 7000;
+  controls.update();
+
+  // Autoplay
+  if (state.autoplay && !camTween) { state.autoT += dt; if (state.autoT > CONFIG.anim.autoplayDelay) { state.autoT = 0; if (state.step === LAST) stopAutoplay(); else next(); } }
+
+  updateLabels();
+  composer.render(dt);
+
+  // Stats & dynamic resolution
+  fpsAcc += dt; fpsFrames++;
+  if (fpsAcc > 0.5) { fps = fpsFrames / fpsAcc; fpsAcc = 0; fpsFrames = 0; if (debugOn) { const i = renderer.info; $('dbg').textContent = `FPS        ${fps.toFixed(0)}\nFrame      ${(1000 / fps).toFixed(1)} ms\nDraw calls ${i.render.calls}\nTriangles  ${(i.render.triangles / 1000).toFixed(0)}k\nRes scale  ${(state.dynScale * settings.resScale / 100).toFixed(2)}\nQuality    ${settings.quality}\nPrograms   ${i.programs ? i.programs.length : '-'}`; } }
+  if (settings.dynRes) {
+    dynAcc += dt; dynFrames++;
+    if (dynAcc > 2) { const f = dynFrames / dynAcc; dynAcc = 0; dynFrames = 0; if (f < CONFIG.dynRes.low && state.dynScale > CONFIG.dynRes.min) { state.dynScale = Math.max(CONFIG.dynRes.min, state.dynScale - 0.1); resize(); } else if (f > CONFIG.dynRes.high && state.dynScale < 1) { state.dynScale = Math.min(1, state.dynScale + 0.05); resize(); } }
+  }
+}
+
+/* =====================================================================
+   22. BOOT SEQUENCE
+   ===================================================================== */
+async function boot() {
+  if (!settings.quality) { settings.quality = detectQuality(); settings.shadows = PRESETS[settings.quality].shadows; settings.bloom = PRESETS[settings.quality].bloom; saveSettings(); }
+  camera.fov = settings.fov; camera.updateProjectionMatrix();
+  const steps = [
+    ['Generating procedural textures', buildTextures],
+    ['Preparing PBR materials', buildMaterials],
+    ['Machining nacelle & cowlings', buildNacelle],
+    ['Weaving the fan module', buildFanModule],
+    ['Stacking compressor stages', buildCompressors],
+    ['Building the hot section', buildHotSection],
+    ['Routing externals & accessories', buildSystems],
+    ['Computing interaction trees', buildBVH],
+    ['Compiling shaders', async () => { applyQuality(); applyControlsSettings(); await renderer.compileAsync(scene, camera); }],
+    ['Warming up the renderer', async () => { composer.render(0.016); }],
+  ];
+  for (let i = 0; i < steps.length; i++) {
+    $('ldText').textContent = steps[i][0] + '…';
+    const pct = Math.round(i / steps.length * 100); $('ldFill').style.width = pct + '%'; $('ldPct').textContent = pct + '%';
+    await nextFrame(); await nextFrame();
+    await steps[i][1]();
+  }
+  $('ldFill').style.width = '100%'; $('ldPct').textContent = '100%'; $('ldText').textContent = 'Ready';
+  wireUI(); buildLabels();
+  // Cinematic reveal: start exploded & wide, assemble while the camera glides in
+  for (const p of partList) { if (p.meta.stage != null) { p.e = 1; p.open = p.meta.open ? 1 : 0; } }
+  camera.position.set(-13.5, 5.2, 9.5); controls.target.set(0, -0.2, 0);
+  applyPartTransforms(); resize();
+  state.ready = true;
+  renderer.setAnimationLoop(loop);
+  await nextFrame();
+  $('loader').classList.add('gone');
+  setTimeout(() => { $('loader').style.display = 'none'; }, 1000);
+  ['brand', 'topRight', 'toolbar', 'explodeBox', 'ctxHint'].forEach((id) => $(id).classList.remove('hidden'));
+  setTimeout(() => $('story').classList.remove('hidden'), 500);
+  goStep(0);
+  flyTo(STEPS[0].cam, 3.0);
+}
+// Small automation/debug hook (used for testing & embedding)
+window.__tf9 = { goStep, select, setCutaway, setXray, setAirflow, setRunning, setThrottle, setIsolate, focusPart, parts, state, camera, controls, renderer };
+['brand', 'topRight', 'toolbar', 'explodeBox', 'ctxHint'].forEach((id) => $(id).classList.add('hidden'));
+boot().catch((e) => { console.error(e); window.__showError(e && e.stack ? e.stack : String(e)); });
+</script>
+</body>
+</html>

@@ -1,0 +1,1661 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>ASCII Ripple Field</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one full-bleed glyph canvas; a thin header strip and a bottom chat dock float above it. */
+:root {
+  --bg: #131314;
+  --panel: rgba(24, 25, 28, 0.92);
+  --panel-solid: #1b1c20;
+  --line: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.13);
+  --fg: #ebecef;
+  --fg-dim: #a1a5ae;
+  --fg-faint: #6b707a;
+  --warn: #e2a55c;
+  --glyph: #2a74b0;
+  --accent: #5ea1dc;
+  --accent-ink: #0b1118;
+  --shadow: 0 18px 48px rgba(0, 0, 0, 0.5);
+  --sw-steel: #3b86c6;
+  --sw-ember: #d27c45;
+  --sw-moss: #57a565;
+  --sw-lilac: #9378db;
+  --sw-mono: #a9adb5;
+  --font-ui: "Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f1f2f4;
+    --panel: rgba(255, 255, 255, 0.93);
+    --panel-solid: #ffffff;
+    --line: rgba(16, 24, 40, 0.09);
+    --line-strong: rgba(16, 24, 40, 0.17);
+    --fg: #14161b;
+    --fg-dim: #535966;
+    --fg-faint: #858b96;
+    --warn: #9a5a06;
+    --glyph: #1c5f9f;
+    --accent: #1f65ad;
+    --accent-ink: #ffffff;
+    --shadow: 0 18px 48px rgba(16, 24, 40, 0.16);
+    --sw-steel: #1f65ad;
+    --sw-ember: #b4561f;
+    --sw-moss: #2f7d40;
+    --sw-lilac: #6a4cc2;
+    --sw-mono: #3d4149;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f1f2f4;
+  --panel: rgba(255, 255, 255, 0.93);
+  --panel-solid: #ffffff;
+  --line: rgba(16, 24, 40, 0.09);
+  --line-strong: rgba(16, 24, 40, 0.17);
+  --fg: #14161b;
+  --fg-dim: #535966;
+  --fg-faint: #858b96;
+  --warn: #9a5a06;
+  --glyph: #1c5f9f;
+  --accent: #1f65ad;
+  --accent-ink: #ffffff;
+  --shadow: 0 18px 48px rgba(16, 24, 40, 0.16);
+  --sw-steel: #1f65ad;
+  --sw-ember: #b4561f;
+  --sw-moss: #2f7d40;
+  --sw-lilac: #6a4cc2;
+  --sw-mono: #3d4149;
+  color-scheme: light;
+}
+/* Glyph palettes: dark values first, then the light-theme versions. */
+:root[data-palette="ember"] { --glyph: #bf6a35; --accent: #e3925a; }
+:root[data-palette="moss"]  { --glyph: #3d8c4b; --accent: #72c07f; }
+:root[data-palette="lilac"] { --glyph: #7a5fc6; --accent: #a691ea; }
+:root[data-palette="mono"]  { --glyph: #9a9ea6; --accent: #d5d7dc; }
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"])[data-palette="ember"] { --glyph: #a54f1b; --accent: #b0541f; }
+  :root:not([data-theme="dark"])[data-palette="moss"]  { --glyph: #2a7339; --accent: #2e7a3d; }
+  :root:not([data-theme="dark"])[data-palette="lilac"] { --glyph: #5d40b3; --accent: #6448bd; }
+  :root:not([data-theme="dark"])[data-palette="mono"]  { --glyph: #33363c; --accent: #2a2d33; }
+}
+:root[data-theme="light"][data-palette="ember"] { --glyph: #a54f1b; --accent: #b0541f; }
+:root[data-theme="light"][data-palette="moss"]  { --glyph: #2a7339; --accent: #2e7a3d; }
+:root[data-theme="light"][data-palette="lilac"] { --glyph: #5d40b3; --accent: #6448bd; }
+:root[data-theme="light"][data-palette="mono"]  { --glyph: #33363c; --accent: #2a2d33; }
+
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  overflow: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+#field {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+}
+.sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button { font: inherit; color: inherit; }
+
+.chrome {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: 16px;
+  padding-top: calc(14px + env(safe-area-inset-top, 0px));
+  padding-bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+
+/* Header */
+.top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.brand { display: flex; flex-direction: column; gap: 7px; user-select: none; min-width: 0; }
+.brand-name {
+  font: 500 12px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--fg-dim);
+}
+.legend {
+  display: flex; flex-wrap: wrap; gap: 4px 12px;
+  font: 11px/1.4 var(--font-mono);
+  color: var(--fg-faint);
+}
+.legend kbd {
+  font: inherit;
+  color: var(--fg-dim);
+  border: 1px solid var(--line-strong);
+  border-radius: 4px;
+  padding: 0 5px;
+  margin-right: 5px;
+}
+.legend .touch { display: none; }
+@media (pointer: coarse) {
+  .legend .mouse { display: none; }
+  .legend .touch { display: inline; }
+}
+
+.tweaks { position: relative; pointer-events: auto; flex: none; }
+.tweaks-btn {
+  display: flex; align-items: center; gap: 8px;
+  font: 500 12px/1 var(--font-mono);
+  color: var(--fg-dim);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  padding: 8px 10px;
+  cursor: pointer;
+}
+.tweaks-btn:hover, .tweaks-btn[aria-expanded="true"] { color: var(--fg); border-color: var(--line-strong); }
+.tweaks-btn .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.tweaks-panel {
+  position: absolute; right: 0; top: calc(100% + 8px);
+  width: 244px;
+  display: grid; gap: 14px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  padding: 14px;
+  box-shadow: var(--shadow);
+  z-index: 5;
+}
+.tweaks-panel fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; min-width: 0; }
+.tweaks-panel legend {
+  padding: 0;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+}
+.swatches { display: flex; gap: 8px; }
+.sw {
+  width: 30px; height: 30px; border-radius: 9px;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+  padding: 0; cursor: pointer;
+  display: grid; place-items: center;
+}
+.sw span { width: 16px; height: 16px; border-radius: 5px; }
+.sw[aria-pressed="true"] { border-color: var(--fg-dim); box-shadow: inset 0 0 0 1px var(--fg-dim); }
+.sw[data-palette="steel"] span { background: var(--sw-steel); }
+.sw[data-palette="ember"] span { background: var(--sw-ember); }
+.sw[data-palette="moss"] span { background: var(--sw-moss); }
+.sw[data-palette="lilac"] span { background: var(--sw-lilac); }
+.sw[data-palette="mono"] span { background: var(--sw-mono); }
+.tweaks-note { margin: 0; font: 11px/1.45 var(--font-mono); color: var(--fg-faint); }
+
+.seg {
+  display: inline-flex; gap: 2px; padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+}
+.seg button {
+  font: 500 11.5px/1 var(--font-mono);
+  color: var(--fg-faint);
+  background: transparent;
+  border: 0; border-radius: 7px;
+  padding: 6px 9px;
+  cursor: pointer;
+}
+.seg button:hover { color: var(--fg-dim); }
+.seg button[aria-checked="true"], .seg button[aria-pressed="true"] {
+  color: var(--fg);
+  background: color-mix(in srgb, var(--fg) 10%, transparent);
+}
+
+/* Chat dock */
+.dock {
+  width: min(680px, 100%);
+  margin-inline: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  min-height: 0;
+}
+.dock > * { pointer-events: auto; }
+.thread {
+  display: flex; flex-direction: column;
+  max-height: min(44vh, 440px);
+  min-height: 0;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+}
+.thread-head {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  padding: 6px 6px 6px 14px;
+  border-bottom: 1px solid var(--line);
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--fg-faint);
+}
+.thread-head .actions { display: flex; gap: 2px; }
+.ghost {
+  font: 500 11px/1 var(--font-mono);
+  color: var(--fg-faint);
+  background: transparent;
+  border: 0; border-radius: 7px;
+  padding: 7px 9px;
+  cursor: pointer;
+}
+.ghost:hover { color: var(--fg); background: color-mix(in srgb, var(--fg) 7%, transparent); }
+.thread.collapsed .msgs { display: none; }
+.thread.collapsed .thread-head { border-bottom-color: transparent; }
+.msgs {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  display: flex; flex-direction: column; gap: 14px;
+  min-height: 0;
+}
+.msg { font-size: 15px; line-height: 1.5; min-width: 0; overflow-wrap: anywhere; }
+.msg.user {
+  align-self: flex-end;
+  max-width: 85%;
+  padding: 7px 12px;
+  white-space: pre-wrap;
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 24%, transparent);
+  border-radius: 12px 12px 4px 12px;
+}
+.msg.assistant .who {
+  margin-bottom: 5px;
+  font: 500 11px/1 var(--font-mono);
+  letter-spacing: 0.06em;
+  color: var(--accent);
+}
+.body p { margin: 0 0 0.6em; }
+.body p:last-child, .body ul:last-child, .body ol:last-child, .body pre:last-child { margin-bottom: 0; }
+.body ul, .body ol { margin: 0.2em 0 0.6em; padding-left: 1.3em; }
+.body li { margin: 0.15em 0; }
+.body a { color: var(--accent); }
+.body code {
+  font: 13px/1.4 var(--font-mono);
+  background: color-mix(in srgb, var(--fg) 8%, transparent);
+  border-radius: 5px;
+  padding: 1px 5px;
+}
+.body pre {
+  margin: 0.4em 0 0.6em;
+  padding: 10px 12px;
+  overflow-x: auto;
+  font: 12.5px/1.5 var(--font-mono);
+  background: color-mix(in srgb, var(--fg) 6%, transparent);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+.body pre code { background: none; padding: 0; font: inherit; }
+.think { display: inline-flex; align-items: center; gap: 8px; font: 12px/1.4 var(--font-mono); color: var(--fg-faint); }
+.think .scr { color: var(--accent); letter-spacing: 0.08em; }
+.note { margin-top: 6px; font: 11.5px/1.45 var(--font-mono); color: var(--fg-faint); }
+.note.err { color: var(--warn); }
+
+.chips { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+.chip {
+  font: 13.5px/1.2 var(--font-ui);
+  color: var(--fg-dim);
+  background: var(--panel);
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  padding: 7px 13px;
+  cursor: pointer;
+}
+.chip:hover { color: var(--fg); border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+
+.composer {
+  display: flex; align-items: flex-end; gap: 8px;
+  padding: 8px 8px 8px 14px;
+  background: var(--panel-solid);
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  box-shadow: var(--shadow);
+}
+.composer:focus-within { border-color: color-mix(in srgb, var(--accent) 55%, var(--line-strong)); }
+.composer textarea {
+  flex: 1; min-width: 0;
+  resize: none; border: 0; outline: 0;
+  background: transparent;
+  color: var(--fg);
+  font: 15px/1.45 var(--font-ui);
+  padding: 6px 0;
+  box-sizing: border-box;
+  height: 34px; max-height: 168px;
+}
+.composer textarea::placeholder { color: var(--fg-faint); }
+.composer textarea:disabled { cursor: not-allowed; }
+.send {
+  flex: none;
+  width: 34px; height: 34px;
+  display: grid; place-items: center;
+  border: 0; border-radius: 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+.send:disabled { opacity: 0.35; cursor: default; }
+.send svg { width: 16px; height: 16px; }
+.send .i-stop { display: none; }
+.send.busy .i-send { display: none; }
+.send.busy .i-stop { display: block; }
+
+.meta {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  min-height: 26px;
+  padding: 0 2px;
+  font: 11.5px/1.3 var(--font-mono);
+  color: var(--fg-faint);
+}
+.status { min-width: 0; text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.status.warn { color: var(--warn); white-space: normal; }
+
+@media (max-width: 520px) {
+  .thread { max-height: 40vh; }
+  .chip { font-size: 13px; padding: 6px 11px; }
+  .meta .status:not(.warn) { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  * { transition: none !important; animation: none !important; }
+}
+</style>
+
+<canvas id="field" aria-hidden="true"></canvas>
+
+<div class="chrome">
+  <header class="top">
+    <div class="brand">
+      <span class="brand-name">ascii ripple field</span>
+      <span class="legend">
+        <span class="mouse"><kbd>move</kbd>trail</span>
+        <span class="mouse"><kbd>click</kbd>ripple</span>
+        <span class="touch"><kbd>drag</kbd>trail</span>
+        <span class="touch"><kbd>tap</kbd>ripple</span>
+      </span>
+    </div>
+    <div class="tweaks">
+      <button class="tweaks-btn" id="tweaksBtn" type="button" aria-expanded="false" aria-controls="tweaksPanel">
+        <span class="dot" aria-hidden="true"></span>Tweaks
+      </button>
+      <div class="tweaks-panel" id="tweaksPanel" hidden>
+        <fieldset>
+          <legend>COLOR</legend>
+          <div class="swatches">
+            <button class="sw" type="button" data-palette="steel" aria-pressed="true" title="Steel" aria-label="Steel"><span></span></button>
+            <button class="sw" type="button" data-palette="ember" aria-pressed="false" title="Ember" aria-label="Ember"><span></span></button>
+            <button class="sw" type="button" data-palette="moss" aria-pressed="false" title="Moss" aria-label="Moss"><span></span></button>
+            <button class="sw" type="button" data-palette="lilac" aria-pressed="false" title="Lilac" aria-label="Lilac"><span></span></button>
+            <button class="sw" type="button" data-palette="mono" aria-pressed="false" title="Mono" aria-label="Mono"><span></span></button>
+          </div>
+        </fieldset>
+        <fieldset>
+          <legend>GLYPHS</legend>
+          <div class="seg" id="glyphSeg">
+            <button type="button" data-set="code" aria-pressed="true">a–z 0–9</button>
+            <button type="button" data-set="binary" aria-pressed="false">0 1</button>
+            <button type="button" data-set="ramp" aria-pressed="false">.:+#@</button>
+          </div>
+        </fieldset>
+        <p class="tweaks-note">Steel with a–z 0–9 matches the original.</p>
+      </div>
+    </div>
+  </header>
+
+  <section class="dock" id="dock" aria-label="Chat with Claude">
+    <div class="thread" id="thread" hidden>
+      <div class="thread-head">
+        <span>CONVERSATION</span>
+        <div class="actions">
+          <button class="ghost" id="clearBtn" type="button">Clear</button>
+          <button class="ghost" id="collapseBtn" type="button" aria-expanded="true" aria-controls="msgs">Hide</button>
+        </div>
+      </div>
+      <div class="msgs" id="msgs" role="log" aria-label="Messages"></div>
+    </div>
+    <div class="chips" id="chips" hidden></div>
+    <form class="composer" id="composer" autocomplete="off">
+      <label class="sr-only" for="prompt">Message Claude</label>
+      <textarea id="prompt" rows="1" placeholder="Ask Claude anything"></textarea>
+      <button class="send" id="sendBtn" type="submit" aria-label="Send" disabled>
+        <svg class="i-send" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg class="i-stop" viewBox="0 0 16 16" aria-hidden="true"><rect x="4" y="4" width="8" height="8" rx="1.5" fill="currentColor"/></svg>
+      </button>
+    </form>
+    <div class="meta">
+      <div class="seg" id="tierSeg" role="radiogroup" aria-label="Reply style">
+        <button type="button" role="radio" data-tier="quick" aria-checked="true" title="Fast, short replies">Quick</button>
+        <button type="button" role="radio" data-tier="deep" aria-checked="false" title="Claude thinks before answering">Deep</button>
+      </div>
+      <span class="status" id="status" aria-live="polite">Enter to send · Shift+Enter for a new line</span>
+    </div>
+  </section>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const root = document.documentElement;
+  const reduceMQ = matchMedia('(prefers-reduced-motion: reduce)');
+  const lightMQ = matchMedia('(prefers-color-scheme: light)');
+  const coarseMQ = matchMedia('(pointer: coarse)');
+  const MONO = '"JetBrains Mono", ui-monospace, "SF Mono", SFMono-Regular, Menlo, Consolas, monospace';
+  const SANS = '"Instrument Sans", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+  const PALETTES = ['steel', 'ember', 'moss', 'lilac', 'mono'];
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) { /* storage unavailable */ } },
+  };
+  const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+  const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
+  const nowS = () => performance.now() / 1000;
+
+  /* ================================================================
+     Field engine
+     A grid of monospace cells. Two energy sources light it up:
+       - glow:  a faint trail painted by pointer movement; it eases in,
+                spreads slowly (diffusion) and fades over a few seconds.
+       - rings: click ripples. The front decelerates (r = R(1 - e^-t/tau)),
+                a bright crest leads, a weaker second ring trails ~100px
+                behind, and the cells it crosses scramble and keep a faint
+                residue that joins the glow.
+     Each frame the cells are packed into a small buffer (glyph index +
+     opacity) and drawn in one WebGL pass that samples a glyph atlas; a 2D
+     canvas path with pre-tinted opacity levels is the fallback.
+     ================================================================ */
+
+  // Paints one row of glyphs, one per cell, in the context's current fill style.
+  function paintGlyphRow(ctx2d, chars, font, cwD, chD, y0, dpr) {
+    ctx2d.font = font;
+    ctx2d.textAlign = 'center';
+    ctx2d.textBaseline = 'middle';
+    for (let j = 0; j < chars.length; j++) ctx2d.fillText(chars[j], j * cwD + cwD / 2, y0 + chD / 2 + dpr * 0.5);
+  }
+
+  function makeGLRenderer(canvas) {
+    let gl = null;
+    try {
+      gl = canvas.getContext('webgl', { alpha: true, premultipliedAlpha: true, antialias: false, depth: false, stencil: false, powerPreference: 'low-power' });
+    } catch (e) { gl = null; }
+    if (!gl) return null;
+    const VS = 'attribute vec2 p;void main(){gl_Position=vec4(p,0.0,1.0);}';
+    const FS = [
+      '#ifdef GL_FRAGMENT_PRECISION_HIGH', 'precision highp float;', '#else', 'precision mediump float;', '#endif',
+      'uniform sampler2D uCells;uniform sampler2D uAtlas;',
+      'uniform vec2 uCell;uniform vec2 uGrid;uniform float uN;uniform float uH;uniform vec3 uColor;',
+      'void main(){',
+      '  vec2 px=vec2(gl_FragCoord.x,uH-gl_FragCoord.y);',
+      '  vec2 cell=floor(px/uCell);',
+      '  vec4 c=texture2D(uCells,(cell+0.5)/uGrid);',
+      '  if(c.g<=0.0)discard;',
+      '  vec2 inC=px-cell*uCell;',
+      '  float gi=floor(c.r*255.0+0.5);',
+      '  float cov=texture2D(uAtlas,vec2((gi*uCell.x+inC.x)/(uN*uCell.x),inC.y/uCell.y)).a;',
+      '  float a=cov*c.g;',
+      '  gl_FragColor=vec4(uColor*a,a);',
+      '}',
+    ].join('\n');
+    let prog, loc, cellsTex, atlasTex, buf;
+    let state = { pw: 1, ph: 1, cwD: 13, chD: 26, cols: 1, rows: 1, chars: '', font: '', dpr: 1, rgb: [42, 116, 176] };
+    let lost = false;
+    const atlasCanvas = document.createElement('canvas');
+
+    function shader(type, src) {
+      const sh = gl.createShader(type);
+      gl.shaderSource(sh, src);
+      gl.compileShader(sh);
+      if (!gl.getShaderParameter(sh, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(sh) || 'shader');
+      return sh;
+    }
+    function tex() {
+      const t = gl.createTexture();
+      gl.bindTexture(gl.TEXTURE_2D, t);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.NEAREST);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+      return t;
+    }
+    function init() {
+      prog = gl.createProgram();
+      gl.attachShader(prog, shader(gl.VERTEX_SHADER, VS));
+      gl.attachShader(prog, shader(gl.FRAGMENT_SHADER, FS));
+      gl.linkProgram(prog);
+      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) throw new Error(gl.getProgramInfoLog(prog) || 'link');
+      gl.useProgram(prog);
+      buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+      const pLoc = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(pLoc);
+      gl.vertexAttribPointer(pLoc, 2, gl.FLOAT, false, 0, 0);
+      loc = {};
+      for (const u of ['uCells', 'uAtlas', 'uCell', 'uGrid', 'uN', 'uH', 'uColor']) loc[u] = gl.getUniformLocation(prog, u);
+      gl.uniform1i(loc.uCells, 0);
+      gl.uniform1i(loc.uAtlas, 1);
+      gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1);
+      gl.pixelStorei(gl.UNPACK_PREMULTIPLY_ALPHA_WEBGL, false);
+      gl.disable(gl.BLEND);
+      gl.activeTexture(gl.TEXTURE0); cellsTex = tex();
+      gl.activeTexture(gl.TEXTURE1); atlasTex = tex();
+    }
+    function applySize() {
+      const s0 = state;
+      gl.viewport(0, 0, s0.pw, s0.ph);
+      gl.activeTexture(gl.TEXTURE0);
+      gl.bindTexture(gl.TEXTURE_2D, cellsTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, s0.cols, s0.rows, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+      gl.uniform2f(loc.uCell, s0.cwD, s0.chD);
+      gl.uniform2f(loc.uGrid, s0.cols, s0.rows);
+      gl.uniform1f(loc.uH, s0.ph);
+    }
+    function applyAtlas() {
+      const s0 = state;
+      if (!s0.chars) return;
+      atlasCanvas.width = s0.chars.length * s0.cwD;
+      atlasCanvas.height = s0.chD;
+      const a = atlasCanvas.getContext('2d');
+      a.clearRect(0, 0, atlasCanvas.width, atlasCanvas.height);
+      a.fillStyle = '#fff';
+      paintGlyphRow(a, s0.chars, s0.font, s0.cwD, s0.chD, 0, s0.dpr);
+      gl.activeTexture(gl.TEXTURE1);
+      gl.bindTexture(gl.TEXTURE_2D, atlasTex);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, atlasCanvas);
+      gl.uniform1f(loc.uN, s0.chars.length);
+    }
+    function applyColor() {
+      const c = state.rgb;
+      gl.uniform3f(loc.uColor, c[0] / 255, c[1] / 255, c[2] / 255);
+    }
+    try { init(); } catch (e) { return null; }
+    canvas.addEventListener('webglcontextlost', e => { e.preventDefault(); lost = true; });
+    canvas.addEventListener('webglcontextrestored', () => {
+      try { init(); applySize(); applyAtlas(); applyColor(); lost = false; } catch (e) { /* stays blank */ }
+    });
+    return {
+      kind: 'gl',
+      resize(pw, ph, cwD, chD, cols, rows) {
+        Object.assign(state, { pw, ph, cwD, chD, cols, rows });
+        if (!lost) applySize();
+      },
+      setGlyphs(chars, font, dpr) {
+        Object.assign(state, { chars, font, dpr });
+        if (!lost) applyAtlas();
+      },
+      setColor(rgb) { state.rgb = rgb; if (!lost) applyColor(); },
+      draw(cells) {
+        if (lost) return;
+        gl.clearColor(0, 0, 0, 0);
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D, cellsTex);
+        gl.texSubImage2D(gl.TEXTURE_2D, 0, 0, 0, state.cols, state.rows, gl.RGBA, gl.UNSIGNED_BYTE, cells);
+        gl.drawArrays(gl.TRIANGLES, 0, 3);
+      },
+      clear() { if (!lost) { gl.clearColor(0, 0, 0, 0); gl.clear(gl.COLOR_BUFFER_BIT); } },
+    };
+  }
+
+  function make2DRenderer(canvas, aMin, gamma) {
+    const ctx = canvas.getContext('2d');
+    const atlas = document.createElement('canvas');
+    const L = 28;
+    const level = new Uint8Array(256);
+    for (let v = 0; v < 256; v++) {
+      const a = v / 255;
+      const t = a <= aMin ? 0 : Math.pow((a - aMin) / (1 - aMin), 1 / gamma);
+      level[v] = Math.min(L - 1, Math.round(t * (L - 1)));
+    }
+    let st = { pw: 1, ph: 1, cwD: 13, chD: 26, cols: 1, rows: 1, chars: '', font: '', dpr: 1, rgb: [42, 116, 176] };
+    function build() {
+      if (!st.chars) return;
+      atlas.width = st.chars.length * st.cwD;
+      atlas.height = L * st.chD;
+      const a = atlas.getContext('2d');
+      a.clearRect(0, 0, atlas.width, atlas.height);
+      const [r, g, b] = st.rgb;
+      for (let k = 0; k < L; k++) {
+        const alpha = aMin + (1 - aMin) * Math.pow(k / (L - 1), gamma);
+        a.fillStyle = `rgba(${r},${g},${b},${alpha.toFixed(4)})`;
+        paintGlyphRow(a, st.chars, st.font, st.cwD, st.chD, k * st.chD, st.dpr);
+      }
+    }
+    return {
+      kind: '2d',
+      resize(pw, ph, cwD, chD, cols, rows) { Object.assign(st, { pw, ph, cwD, chD, cols, rows }); build(); },
+      setGlyphs(chars, font, dpr) { Object.assign(st, { chars, font, dpr }); build(); },
+      setColor(rgb) { st.rgb = rgb; build(); },
+      draw(cells) {
+        ctx.clearRect(0, 0, st.pw, st.ph);
+        const { cols, rows, cwD, chD } = st;
+        let i = 0;
+        for (let gy = 0; gy < rows; gy++) {
+          const y = gy * chD;
+          for (let gx = 0; gx < cols; gx++, i += 4) {
+            const v = cells[i + 1];
+            if (v === 0) continue;
+            ctx.drawImage(atlas, cells[i] * cwD, level[v] * chD, cwD, chD, gx * cwD, y, cwD, chD);
+          }
+        }
+      },
+      clear() { ctx.clearRect(0, 0, st.pw, st.ph); },
+    };
+  }
+
+  const Field = (() => {
+    const canvas = document.getElementById('field');
+    const etchCanvas = document.createElement('canvas');
+
+    const C = {
+      cellW: 6.4, cellH: 12.8, fontPx: 10.2,
+      aMin: 0.022, gamma: 1.6,
+      step: 1 / 60,
+      trailRadius: 52, trailSigma: 21, trailGain: 0.026, trailCap: 0.28, trailDelay: 0.11,
+      glowTau: 3.8, diffusion: 500, residue: 0.05,
+      rippleR: 600, rippleTau: 1.5, lead: 14, hold: 1.1, fadeFast: 0.6, fadeSlow: 2.6, tail: 0.35,
+      crestAmp: 0.53, crestSigma: 15, crestGrow: 34, edge: 5,
+      secondAmp: 0.32, secondU: 100, secondSigma: 22, secondGrow: 10,
+      wakeAmp: 0.62, wakeTau: 0.36, wakeRise: 0.07,
+      scramble: 0.42,
+      maxRipples: 28,
+    };
+    const SETS = {
+      code: 'abcdefghijklmnopqrstuvwxyz0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+      binary: '01',
+      ramp: '.:-=+*#%@',
+    };
+
+    let dpr = 0, W = 0, H = 0, cwD = 0, chD = 0, cw = 6.5, ch = 13, cols = 0, rows = 0, n = 0;
+    let viewScale = 1;
+    let glow, pend, ringE, tmp, nz, jit, glyph, vis, cellBuf;
+    let setName = 'code';
+    let pickLUT = new Uint8Array(1024);
+    const alphaLUT = new Uint8Array(2048);
+    const rampLUT = new Uint8Array(2048);
+    const renderer = makeGLRenderer(canvas) || make2DRenderer(canvas, C.aMin, C.gamma);
+    let ripples = [];
+    let etch = null;
+    let sweep = null;
+    const path = [];
+    let hasLast = false, lastX = 0, lastY = 0;
+    let running = false, lastTs = 0, acc = 0;
+    let glowMax = 0, pendAny = false;
+    let pulseAt = null, nextPulse = 0;
+
+    // xorshift32: cheap randomness for the hot loops
+    let seed = ((Math.random() * 0xffffffff) >>> 0) || 1;
+    const rand = () => { seed ^= seed << 13; seed ^= seed >>> 17; seed ^= seed << 5; return (seed >>> 0) * 2.3283064365386963e-10; };
+    const pick = () => pickLUT[(rand() * 1024) | 0];
+
+    function buildPickLUT() {
+      const lut = new Uint8Array(1024);
+      if (setName === 'code') {
+        // the original is mostly lowercase, some digits, a few capitals
+        const w = [];
+        for (let j = 0; j < 26; j++) w.push(0.75 / 26);
+        for (let j = 0; j < 10; j++) w.push(0.17 / 10);
+        for (let j = 0; j < 26; j++) w.push(0.08 / 26);
+        let accW = 0, j = 0;
+        for (let q = 0; q < 1024; q++) {
+          const target = (q + 0.5) / 1024;
+          while (j < w.length - 1 && accW + w[j] < target) { accW += w[j]; j++; }
+          lut[q] = j;
+        }
+      } else {
+        const N = SETS[setName].length;
+        for (let q = 0; q < 1024; q++) lut[q] = (q * N / 1024) | 0;
+      }
+      pickLUT = lut;
+    }
+
+    function buildLUTs() {
+      const N = SETS[setName].length;
+      for (let q = 0; q < 2048; q++) {
+        const a = q / 2047;
+        alphaLUT[q] = a < C.aMin ? 0 : Math.max(1, Math.round(a * 255));
+        rampLUT[q] = Math.min(N - 1, Math.floor(Math.pow(a, 0.7) * N));
+      }
+    }
+
+    function readGlyphRGB() {
+      const raw = getComputedStyle(root).getPropertyValue('--glyph').trim() || '#2a74b0';
+      const c = document.createElement('canvas').getContext('2d');
+      c.fillStyle = '#2a74b0';
+      c.fillStyle = raw;
+      const v = c.fillStyle;
+      if (v[0] === '#') return [parseInt(v.slice(1, 3), 16), parseInt(v.slice(3, 5), 16), parseInt(v.slice(5, 7), 16)];
+      const m = v.match(/[\d.]+/g);
+      return m ? m.slice(0, 3).map(Number) : [42, 116, 176];
+    }
+
+    function buildAtlas() {
+      if (!cwD) return;
+      renderer.setColor(readGlyphRGB());
+      renderer.setGlyphs(SETS[setName], `400 ${(C.fontPx * dpr).toFixed(2)}px ${MONO}`, dpr);
+      buildLUTs();
+    }
+
+    function buildNoise() {
+      // smooth noise stretched along x, so dim and bright cells come in short runs
+      const sx = 5.5, sy = 1.6;
+      const lw = Math.ceil(cols / sx) + 4, lh = Math.ceil(rows / sy) + 3;
+      const lat = new Float32Array(lw * lh);
+      for (let i = 0; i < lat.length; i++) lat[i] = rand();
+      for (let y = 0; y < rows; y++) {
+        const fy = y / sy, iy = fy | 0, ty = fy - iy, wy = ty * ty * (3 - 2 * ty);
+        const off = (y * 0.618) % 1;
+        for (let x = 0; x < cols; x++) {
+          const fx = x / sx + off, ix = fx | 0, tx = fx - ix, wx = tx * tx * (3 - 2 * tx);
+          const a = lat[iy * lw + ix], b = lat[iy * lw + ix + 1];
+          const c = lat[(iy + 1) * lw + ix], d = lat[(iy + 1) * lw + ix + 1];
+          const top = a + (b - a) * wx, bot = c + (d - c) * wx;
+          const i = y * cols + x;
+          nz[i] = clamp((top + (bot - top) * wy) * 0.78 + rand() * 0.22, 0, 1);
+          jit[i] = 0.8 + rand() * 0.28;
+        }
+      }
+    }
+
+    function realloc(nc, nr) {
+      const nn = nc * nr;
+      const ng = new Float32Array(nn), np = new Float32Array(nn), ngl = new Uint8Array(nn);
+      for (let i = 0; i < nn; i++) ngl[i] = pick();
+      if (glow) {
+        const mc = Math.min(nc, cols), mr = Math.min(nr, rows);
+        for (let y = 0; y < mr; y++) {
+          for (let x = 0; x < mc; x++) {
+            const a = y * cols + x, b = y * nc + x;
+            ng[b] = glow[a]; np[b] = pend[a]; ngl[b] = glyph[a];
+          }
+        }
+      }
+      cols = nc; rows = nr; n = nn;
+      glow = ng; pend = np; glyph = ngl;
+      ringE = new Float32Array(nn);
+      tmp = new Float32Array(nn);
+      vis = new Uint8Array(nn);
+      cellBuf = new Uint8Array(nn * 4);
+      nz = new Float32Array(nn);
+      jit = new Float32Array(nn);
+      buildNoise();
+      etch = null;
+    }
+
+    function resize() {
+      const ndpr = Math.min(window.devicePixelRatio || 1, renderer.kind === 'gl' ? 3 : 2);
+      const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight);
+      const ncwD = Math.max(5, Math.round(C.cellW * ndpr));
+      const nchD = Math.max(10, Math.round(C.cellH * ndpr));
+      const pw = Math.round(w * ndpr), ph = Math.round(h * ndpr);
+      const ncols = Math.ceil(pw / ncwD), nrows = Math.ceil(ph / nchD);
+      const atlasStale = ndpr !== dpr || ncwD !== cwD || nchD !== chD;
+      canvas.width = pw;
+      canvas.height = ph;
+      W = w; H = h; dpr = ndpr; cwD = ncwD; chD = nchD; cw = cwD / dpr; ch = chD / dpr;
+      viewScale = clamp(Math.hypot(w, h) / 1447, 0.68, 1.35);
+      if (ncols !== cols || nrows !== rows) realloc(ncols, nrows);
+      renderer.resize(pw, ph, cwD, chD, cols, rows);
+      if (atlasStale) buildAtlas();
+      wake();
+    }
+
+    /* ---------- trail (pointer movement) ---------- */
+    function stamp(x, y, amt) {
+      const R = C.trailRadius, R2 = R * R, k = 1 / (2 * C.trailSigma * C.trailSigma);
+      const gx0 = Math.max(0, Math.floor((x - R) / cw)), gx1 = Math.min(cols - 1, Math.floor((x + R) / cw));
+      const gy0 = Math.max(0, Math.floor((y - R) / ch)), gy1 = Math.min(rows - 1, Math.floor((y + R) / ch));
+      for (let gy = gy0; gy <= gy1; gy++) {
+        const dy = (gy + 0.5) * ch - y, dy2 = dy * dy;
+        if (dy2 > R2) continue;
+        const row = gy * cols;
+        for (let gx = gx0; gx <= gx1; gx++) {
+          const dx = (gx + 0.5) * cw - x, d2 = dx * dx + dy2;
+          if (d2 > R2) continue;
+          const i = row + gx;
+          const v = pend[i] + amt * Math.exp(-d2 * k);
+          pend[i] = v > C.trailCap ? C.trailCap : v;
+        }
+      }
+    }
+
+    function depositSegment(x0, y0, x1, y1) {
+      const dx = x1 - x0, dy = y1 - y0, len = Math.hypot(dx, dy);
+      if (len < 0.3 || len > 600) return;
+      const steps = Math.max(1, Math.ceil(len / 4));
+      const amt = C.trailGain * (len / steps) / 4;
+      for (let s = 1; s <= steps; s++) stamp(x0 + dx * s / steps, y0 + dy * s / steps, amt);
+    }
+
+    function consumePath() {
+      for (let j = 0; j < path.length; j += 2) {
+        const x = path[j], y = path[j + 1];
+        if (x !== x) { hasLast = false; continue; } // NaN marks a break in the stroke
+        if (hasLast) depositSegment(lastX, lastY, x, y);
+        lastX = x; lastY = y; hasLast = true;
+      }
+      path.length = 0;
+    }
+
+    /* ---------- fixed-rate simulation ---------- */
+    function diffuse(dt) {
+      let ax = C.diffusion * dt / (cw * cw), ay = C.diffusion * dt / (ch * ch);
+      const s = 2 * (ax + ay);
+      if (s > 0.9) { ax *= 0.9 / s; ay *= 0.9 / s; }
+      const c0 = 1 - 2 * ax - 2 * ay;
+      tmp.set(glow);
+      for (let y = 0; y < rows; y++) {
+        const row = y * cols;
+        const up = y > 0 ? row - cols : row;
+        const dn = y < rows - 1 ? row + cols : row;
+        for (let x = 0; x < cols; x++) {
+          const i = row + x;
+          const c = tmp[i];
+          const l = x > 0 ? tmp[i - 1] : c;
+          const r = x < cols - 1 ? tmp[i + 1] : c;
+          glow[i] = c0 * c + ax * (l + r) + ay * (tmp[up + x] + tmp[dn + x]);
+        }
+      }
+    }
+
+    function simStep(dt) {
+      const kT = Math.min(1, dt / C.trailDelay);
+      const decay = Math.exp(-dt / C.glowTau);
+      const cap = C.trailCap, res = C.residue, scr = C.scramble;
+      let gm = 0, pAny = false;
+      for (let i = 0; i < n; i++) {
+        let g = glow[i];
+        const pv = pend[i];
+        if (pv > 0) {
+          let tr = pv * kT, np = pv - tr;
+          if (np < 1e-4) { tr += np; np = 0; } else pAny = true;
+          pend[i] = np;
+          g += tr;
+          if (g > cap) g = cap;
+        }
+        const r = ringE[i];
+        if (r > 0.04) {
+          const rr = r * res;
+          if (rr > g) g = rr;
+          if (rand() < scr * r) glyph[i] = pick();
+        }
+        g *= decay;
+        if (g < 1e-4) g = 0;
+        glow[i] = g;
+        if (g > gm) gm = g;
+      }
+      glowMax = gm;
+      pendAny = pAny;
+      if (gm > 0.008) diffuse(dt);
+    }
+
+    /* ---------- rings ---------- */
+    function computeRings(now) {
+      ringE.fill(0);
+      let any = false;
+      for (let k = ripples.length - 1; k >= 0; k--) {
+        const p = ripples[k];
+        const t = now - p.t0;
+        if (t < 0) { any = true; continue; }
+        const td = t - C.hold;
+        const A = p.amp * (td <= 0 ? 1 : (1 - C.tail) * Math.exp(-td / C.fadeFast) + C.tail * Math.exp(-td / C.fadeSlow));
+        if (A < 0.012) { ripples.splice(k, 1); continue; }
+        any = true;
+        const R = p.R, tau = p.tau;
+        const r = p.lead + R * (1 - Math.exp(-t / tau));
+        const sig = C.crestSigma + C.crestGrow * Math.max(0, t - 0.8);
+        const inv2 = 1 / (sig * sig), invE = 1 / (C.edge * C.edge);
+        const crestA = C.crestAmp * A;
+        const sec = C.secondAmp * smooth(0.55, 1.3, t) * A;
+        const secSig = C.secondSigma + C.secondGrow * Math.max(0, t - 1);
+        const wakeA = C.wakeAmp * p.amp * Math.min(1, A * 1.25);
+        const uMax = Math.max(6 + 3 * sig, sec > 0.01 ? C.secondU + 3 * secSig : 0);
+        const dWake = t > 1.25 ? R * (1 - Math.exp(-(t - 1.25) / tau)) : 0;
+        const rIn = Math.max(0, Math.min(r - uMax, dWake));
+        const rOut = r + 3 * C.edge;
+        const rOut2 = rOut * rOut, rIn2 = rIn * rIn;
+        const gy0 = Math.max(0, Math.floor((p.y - rOut) / ch));
+        const gy1 = Math.min(rows - 1, Math.floor((p.y + rOut) / ch));
+        for (let gy = gy0; gy <= gy1; gy++) {
+          const dy = (gy + 0.5) * ch - p.y, dy2 = dy * dy;
+          if (dy2 >= rOut2) continue;
+          const xo = Math.sqrt(rOut2 - dy2);
+          const xi = dy2 < rIn2 ? Math.sqrt(rIn2 - dy2) : 0;
+          const row = gy * cols;
+          let s0 = Math.max(0, Math.floor((p.x - xo) / cw)), s1, s2, s3 = Math.min(cols - 1, Math.floor((p.x + xo) / cw));
+          if (xi > 0) {
+            s1 = Math.min(cols - 1, Math.floor((p.x - xi) / cw));
+            s2 = Math.max(0, Math.floor((p.x + xi) / cw));
+            if (s1 + 1 >= s2) { s1 = s3; s2 = s3 + 1; }
+          } else { s1 = s3; s2 = s3 + 1; }
+          for (let pass = 0; pass < 2; pass++) {
+            const a = pass === 0 ? s0 : s2, b = pass === 0 ? s1 : s3;
+            for (let gx = a; gx <= b; gx++) {
+              const dx = (gx + 0.5) * cw - p.x;
+              const d = Math.sqrt(dx * dx + dy2);
+              const u = r - d;
+              if (u < -3 * C.edge) continue;
+              const v = u - 6;
+              let e = crestA * (v < 0 ? Math.exp(-v * v * invE) : Math.exp(-v * v * inv2));
+              if (sec > 0.01) {
+                const w = (u - C.secondU) / secSig;
+                if (w > -3 && w < 3) e += sec * Math.exp(-w * w);
+              }
+              if (u > 0 && wakeA > 0.01) {
+                const q = Math.max(0, d - p.lead) / R;
+                if (q < 0.995) {
+                  const dl = t + tau * Math.log(1 - q);
+                  // the wake rises just behind the crest, then fades with time since the front passed
+                  if (dl > 0 && dl < 1.5) e += wakeA * (1 - Math.exp(-dl / C.wakeRise)) * Math.exp(-dl / C.wakeTau);
+                }
+              }
+              if (e <= 0.004) continue;
+              if (e > 1) e = 1;
+              const i = row + gx;
+              const o = ringE[i];
+              ringE[i] = o + e - o * e;
+            }
+          }
+        }
+      }
+      if (etch) {
+        const t = now - etch.t0;
+        const fade = t < etch.hold ? 1 : Math.exp(-(t - etch.hold) / 0.9);
+        if (fade < 0.02) etch = null;
+        else {
+          any = true;
+          const span = Math.max(1, etch.x1 - etch.x0);
+          const cells = etch.cells, mask = etch.mask;
+          for (let j = 0; j < cells.length; j++) {
+            const i = cells[j];
+            const gx = i % cols;
+            const rv = (t - 0.75 * (gx - etch.x0) / span) / 0.3;
+            if (rv <= 0) continue;
+            const e = mask[j] * fade * (rv >= 1 ? 1 : rv * rv * (3 - 2 * rv)) * 0.92;
+            const o = ringE[i];
+            ringE[i] = o + e - o * e;
+          }
+        }
+      }
+      return any;
+    }
+
+    /* ---------- drawing ---------- */
+    // Pack every cell into [glyph index, opacity] and hand it to the renderer.
+    function draw() {
+      const aMin = C.aMin, ramp = setName === 'ramp', buf = cellBuf;
+      for (let i = 0, o = 0; i < n; i++, o += 4) {
+        const g = glow[i] * (0.45 + nz[i]);
+        const r = ringE[i] * jit[i];
+        let a = r + g - r * g;
+        if (a < aMin) { vis[i] = 0; buf[o + 1] = 0; continue; }
+        if (a > 1) a = 1;
+        if (vis[i] === 0) { vis[i] = 1; glyph[i] = pick(); }
+        const q = (a * 2047) | 0;
+        buf[o] = ramp ? rampLUT[q] : glyph[i];
+        buf[o + 1] = alphaLUT[q];
+      }
+      renderer.draw(buf);
+    }
+
+    function loop(ts) {
+      const now = ts / 1000;
+      let dt = lastTs ? now - lastTs : C.step;
+      lastTs = now;
+      if (dt > 0.1) dt = 0.1;
+      if (sweep) runSweep(now);
+      consumePath();
+      acc += dt;
+      let steps = 0;
+      while (acc >= C.step && steps < 3) { simStep(C.step); acc -= C.step; steps++; }
+      if (steps === 3) acc = 0;
+      if (pulseAt && now >= nextPulse) {
+        const pt = pulseAt();
+        if (pt) addRipple(pt[0], pt[1], 0.5, 0.42);
+        nextPulse = now + 1.5;
+      }
+      const ringsAlive = computeRings(now);
+      draw();
+      const alive = ringsAlive || pendAny || glowMax * 1.45 > C.aMin || path.length > 0 || sweep || pulseAt;
+      if (alive) requestAnimationFrame(loop);
+      else {
+        running = false;
+        lastTs = 0;
+        glow.fill(0);
+        renderer.clear();
+      }
+    }
+
+    function wake() {
+      if (running || !n) return;
+      running = true;
+      lastTs = 0;
+      acc = 0;
+      requestAnimationFrame(loop);
+    }
+
+    function addRipple(x, y, amp = 1, scale = 1, delay = 0) {
+      if (!n) return;
+      if (ripples.length >= C.maxRipples) ripples.shift();
+      ripples.push({
+        x, y, amp,
+        lead: C.lead * Math.min(1, scale),
+        R: C.rippleR * viewScale * scale,
+        tau: C.rippleTau * (0.75 + 0.25 * Math.min(1, scale)),
+        t0: nowS() + delay,
+      });
+      wake();
+    }
+
+    function rippleAtEl(el, amp = 1, scale = 1) {
+      if (!el) return;
+      const b = el.getBoundingClientRect();
+      addRipple(b.left + b.width / 2, b.top + Math.min(b.height / 2, 18), amp, scale);
+    }
+
+    /* ---------- intro sweep ---------- */
+    function runSweep(now) {
+      const s = sweep;
+      const u = (now - s.t0) / s.dur;
+      if (u < 0) return;
+      const uu = Math.min(1, u);
+      const e = uu < 0.5 ? 2 * uu * uu : 1 - Math.pow(-2 * uu + 2, 2) / 2;
+      const x = s.x0 + (s.x1 - s.x0) * e;
+      const y = s.y + Math.sin(uu * Math.PI * 1.6) * s.amp;
+      if (s.has) depositSegment(s.lx, s.ly, x, y);
+      s.lx = x; s.ly = y; s.has = true;
+      if (u >= 1) sweep = null;
+    }
+
+    function intro() {
+      if (reduceMQ.matches || !n) return;
+      addRipple(W * 0.5, H * 0.34, 1, 1, 0.1);
+      sweep = { t0: nowS() + 0.45, dur: 1.6, x0: W * 0.1, x1: W * 0.9, y: H * 0.56, amp: H * 0.05, has: false, lx: 0, ly: 0 };
+      wake();
+    }
+
+    /* ---------- writing words into the field ---------- */
+    async function etchText(text) {
+      const word = String(text).replace(/\s+/g, ' ').trim().slice(0, 14);
+      if (!word || !n) return '';
+      try {
+        await Promise.race([document.fonts.load(`700 64px ${SANS}`), new Promise(r => setTimeout(r, 600))]);
+      } catch (e) { /* fall back to whatever is loaded */ }
+      etchCanvas.width = cols;
+      etchCanvas.height = rows;
+      const c = etchCanvas.getContext('2d', { willReadFrequently: true });
+      c.setTransform(1, 0, 0, 1, 0, 0);
+      c.clearRect(0, 0, cols, rows);
+      const sy = cw / ch; // cells are taller than wide: squash vertically so letters keep their shape
+      const capPx = Math.min(H * 0.24, W * 0.2, 190);
+      let fx = (capPx / 0.72) / cw;
+      c.font = `700 ${fx}px ${SANS}`;
+      let tw = c.measureText(word).width;
+      const maxW = cols * 0.86;
+      if (tw > maxW) { fx *= maxW / tw; c.font = `700 ${fx}px ${SANS}`; tw = maxW; }
+      c.setTransform(1, 0, 0, sy, 0, 0);
+      c.fillStyle = '#fff';
+      c.textAlign = 'center';
+      c.textBaseline = 'middle';
+      const cyRows = rows * 0.4;
+      c.fillText(word, cols / 2, cyRows / sy);
+      const data = c.getImageData(0, 0, cols, rows).data;
+      const cells = [], mask = [];
+      for (let i = 0; i < n; i++) {
+        const a = data[i * 4 + 3] / 255;
+        if (a > 0.1) { cells.push(i); mask.push(a); }
+      }
+      etch = {
+        t0: nowS(), hold: 5.2,
+        cells: Int32Array.from(cells), mask: Float32Array.from(mask),
+        x0: (cols - tw) / 2, x1: (cols + tw) / 2,
+      };
+      addRipple(W / 2, cyRows * ch, 0.85, 1);
+      return word;
+    }
+
+    function setGlyphSet(name) {
+      if (!SETS[name] || name === setName) return;
+      setName = name;
+      buildPickLUT();
+      for (let i = 0; i < n; i++) glyph[i] = pick();
+      buildAtlas();
+      wake();
+    }
+
+    function refreshColors() { buildAtlas(); wake(); }
+
+    function setPulse(fn) {
+      pulseAt = reduceMQ.matches ? null : fn;
+      nextPulse = nowS() + 0.9;
+      if (pulseAt) wake();
+    }
+
+    function streamPulse(x0, x1, y, size) {
+      if (reduceMQ.matches) return;
+      const x = x0 + rand() * (x1 - x0);
+      addRipple(x, y, clamp(0.25 + size / 120, 0.25, 0.5), 0.3);
+    }
+
+    /* ---------- pointer input ---------- */
+    canvas.addEventListener('pointerdown', e => {
+      if (e.pointerType === 'mouse' && e.button !== 0) return;
+      addRipple(e.clientX, e.clientY, 1);
+      path.push(NaN, NaN, e.clientX, e.clientY);
+      wake();
+    });
+    canvas.addEventListener('pointermove', e => {
+      const list = typeof e.getCoalescedEvents === 'function' ? e.getCoalescedEvents() : null;
+      if (list && list.length) for (const p of list) path.push(p.clientX, p.clientY);
+      else path.push(e.clientX, e.clientY);
+      wake();
+    }, { passive: true });
+    const breakStroke = () => { path.push(NaN, NaN); };
+    canvas.addEventListener('pointerleave', breakStroke);
+    canvas.addEventListener('pointerup', e => { if (e.pointerType !== 'mouse') breakStroke(); });
+    canvas.addEventListener('pointercancel', breakStroke);
+    document.addEventListener('visibilitychange', () => { if (!document.hidden) wake(); });
+
+    buildPickLUT();
+    return {
+      resize, intro, wake,
+      ripple: addRipple, rippleAtEl, etch: etchText,
+      setGlyphSet, refreshColors, setPulse, streamPulse,
+      get setName() { return setName; },
+    };
+  })();
+
+  /* ================================================================
+     Tweaks: palette and glyph set (remembered per viewer)
+     ================================================================ */
+  const tweaksBtn = document.getElementById('tweaksBtn');
+  const tweaksPanel = document.getElementById('tweaksPanel');
+  const swatches = [...document.querySelectorAll('.sw')];
+  const glyphBtns = [...document.querySelectorAll('#glyphSeg button')];
+
+  function currentPalette() { return root.dataset.palette || 'steel'; }
+  function setPalette(name) {
+    if (!PALETTES.includes(name)) return;
+    if (name === 'steel') delete root.dataset.palette; else root.dataset.palette = name;
+    swatches.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.palette === name)));
+    store.set('arf.palette', name);
+  }
+  function setGlyphs(name) {
+    Field.setGlyphSet(name);
+    glyphBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.set === name)));
+    store.set('arf.glyphs', name);
+  }
+  function openTweaks(open) {
+    tweaksPanel.hidden = !open;
+    tweaksBtn.setAttribute('aria-expanded', String(open));
+  }
+  tweaksBtn.addEventListener('click', () => openTweaks(tweaksPanel.hidden));
+  swatches.forEach(b => b.addEventListener('click', () => setPalette(b.dataset.palette)));
+  glyphBtns.forEach(b => b.addEventListener('click', () => setGlyphs(b.dataset.set)));
+  document.addEventListener('pointerdown', e => {
+    if (!tweaksPanel.hidden && !e.target.closest('.tweaks')) openTweaks(false);
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && !tweaksPanel.hidden) { openTweaks(false); tweaksBtn.focus(); }
+  });
+
+  const savedPalette = store.get('arf.palette');
+  if (savedPalette && PALETTES.includes(savedPalette)) setPalette(savedPalette);
+  const savedGlyphs = store.get('arf.glyphs');
+  if (savedGlyphs === 'binary' || savedGlyphs === 'ramp') {
+    Field.setGlyphSet(savedGlyphs);
+    glyphBtns.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.set === savedGlyphs)));
+  }
+
+  new MutationObserver(() => Field.refreshColors()).observe(root, { attributes: true, attributeFilter: ['data-theme', 'data-palette'] });
+  lightMQ.addEventListener('change', () => Field.refreshColors());
+
+  /* ================================================================
+     Chat with Claude (the artifact's `sample` capability)
+     ================================================================ */
+  const els = {
+    dock: document.getElementById('dock'),
+    thread: document.getElementById('thread'),
+    msgs: document.getElementById('msgs'),
+    chips: document.getElementById('chips'),
+    form: document.getElementById('composer'),
+    input: document.getElementById('prompt'),
+    send: document.getElementById('sendBtn'),
+    status: document.getElementById('status'),
+    clear: document.getElementById('clearBtn'),
+    collapse: document.getElementById('collapseBtn'),
+    tierBtns: [...document.querySelectorAll('#tierSeg button')],
+  };
+  const CODECHARS = 'abcdefghijklmnopqrstuvwxyz0123456789';
+  const ERR = {
+    not_granted: 'Claude access was declined for this page, so chat is off. Reload to be asked again.',
+    sampling_disabled: 'Claude isn’t available on this account, so chat is off. The field still works.',
+    not_declared: 'This version of the page can’t reach Claude.',
+    capability_disabled: 'Claude can’t be reached from this view. The field still works.',
+    capability_removed: 'This Claude app is too old for this chat. Update it to chat here.',
+    rate_limited: 'Too many messages in a short time. Wait a moment, then send again.',
+    session_expired: 'Your Claude session expired. Sign in again, then resend.',
+    refused: 'Claude declined that one. Try asking a different way.',
+    empty_completion: 'No reply came back. Try rephrasing.',
+    prompt_too_large: 'The conversation got too long. Clear it and start again.',
+    invalid_request: 'That message couldn’t be sent. Try rephrasing it.',
+    upstream_error: 'The reply was interrupted. Send again to retry.',
+  };
+  const FATAL = new Set(['not_granted', 'sampling_disabled', 'not_declared', 'capability_disabled', 'capability_removed']);
+  const HINT = 'Enter to send · Shift+Enter for a new line';
+
+  let sample = null, samplePromise = null, toolsOK = false, fatal = null;
+  let turns = [];
+  let busy = false, ctl = null, thinkTimer = null;
+  let tier = store.get('arf.tier') === 'deep' ? 'deep' : 'quick';
+
+  function setStatus(text, warn) {
+    els.status.textContent = text;
+    els.status.classList.toggle('warn', !!warn);
+  }
+  function setFatal(code) {
+    fatal = code;
+    const copy = code === 'outside'
+      ? 'Open this page in Claude to chat. The field works anywhere.'
+      : code === 'absent'
+        ? 'Chat with Claude isn’t available in this view. The field still works.'
+        : (ERR[code] || ERR.capability_disabled);
+    setStatus(copy, true);
+    els.input.disabled = true;
+    els.input.placeholder = 'Chat is unavailable here';
+    els.chips.hidden = true;
+    updateSend();
+  }
+
+  function initSample() {
+    if (window.claude && typeof window.claude.use === 'function') {
+      samplePromise = window.claude.use('sample').then(async s => {
+        sample = s || null;
+        if (!sample) { setFatal('absent'); return null; }
+        try {
+          const lim = await sample.limits();
+          toolsOK = !!(lim && lim.tools);
+        } catch (e) { toolsOK = false; }
+        renderChips();
+        return sample;
+      }, () => { setFatal('absent'); return null; });
+    } else {
+      samplePromise = Promise.resolve(null);
+      setFatal('outside');
+    }
+  }
+
+  function renderChips() {
+    if (fatal) { els.chips.hidden = true; return; }
+    const list = toolsOK
+      ? ['How does this effect work?', 'Write HELLO in the field', 'Turn it green']
+      : ['How does this effect work?', 'How would I build this?', 'Tell me a tiny story'];
+    els.chips.replaceChildren(...list.map(t => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'chip';
+      b.textContent = t;
+      b.addEventListener('click', () => send(t));
+      return b;
+    }));
+    els.chips.hidden = turns.length > 0 || els.msgs.childElementCount > 0;
+  }
+
+  /* --- minimal, safe markdown: paragraphs, lists, code, bold, italics, links --- */
+  const esc = s => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  function inline(s) {
+    let h = esc(s);
+    h = h.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+    h = h.replace(/\*\*([^*\n]+)\*\*/g, '<strong>$1</strong>');
+    h = h.replace(/(^|[^*\w])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    h = h.replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>');
+    return h.replace(/\n/g, '<br>');
+  }
+  function blocks(text) {
+    let html = '', para = [], list = null;
+    const flushPara = () => { if (para.length) { html += `<p>${inline(para.join('\n'))}</p>`; para = []; } };
+    const flushList = () => {
+      if (list) { html += `<${list.t}>${list.items.map(it => `<li>${inline(it)}</li>`).join('')}</${list.t}>`; list = null; }
+    };
+    for (const raw of text.split('\n')) {
+      const line = raw.replace(/\s+$/, '');
+      const ul = /^\s*[-*•]\s+(.*)$/.exec(line);
+      const ol = /^\s*\d+[.)]\s+(.*)$/.exec(line);
+      if (ul || ol) {
+        flushPara();
+        const t = ul ? 'ul' : 'ol';
+        if (!list || list.t !== t) { flushList(); list = { t, items: [] }; }
+        list.items.push((ul || ol)[1]);
+        continue;
+      }
+      if (!line.trim()) { flushPara(); flushList(); continue; }
+      flushList();
+      para.push(line.replace(/^#{1,6}\s+/, ''));
+    }
+    flushPara(); flushList();
+    return html;
+  }
+  // While a reply streams, close a dangling ** or ` so markers never flash on screen.
+  function closeOpen(src) {
+    if (((src.match(/```/g) || []).length) % 2 === 1) return src;
+    let out = src;
+    const outside = out.replace(/```[\s\S]*?```/g, '');
+    if (((outside.match(/`/g) || []).length) % 2 === 1) out += '`';
+    if (((outside.replace(/`[^`]*`/g, '').match(/\*\*/g) || []).length) % 2 === 1) out += '**';
+    return out;
+  }
+  function renderMarkdown(src) {
+    return src.split('```').map((part, idx) => {
+      if (idx % 2 === 0) return blocks(part);
+      const nl = part.indexOf('\n');
+      const code = nl >= 0 && /^[\w+#.-]*$/.test(part.slice(0, nl).trim()) ? part.slice(nl + 1) : part;
+      return `<pre><code>${esc(code.replace(/\n$/, ''))}</code></pre>`;
+    }).join('');
+  }
+
+  function nearBottom() { return els.msgs.scrollHeight - els.msgs.scrollTop - els.msgs.clientHeight < 60; }
+  function scrollToEnd(force) { if (force || nearBottom()) els.msgs.scrollTop = els.msgs.scrollHeight; }
+
+  function showThread() {
+    els.thread.hidden = false;
+    els.chips.hidden = true;
+  }
+  function addMessage(role, text) {
+    const el = document.createElement('div');
+    el.className = `msg ${role}`;
+    if (role === 'user') el.textContent = text;
+    else {
+      const who = document.createElement('div');
+      who.className = 'who';
+      who.textContent = 'claude';
+      const body = document.createElement('div');
+      body.className = 'body';
+      const note = document.createElement('div');
+      note.className = 'note';
+      note.hidden = true;
+      el.append(who, body, note);
+    }
+    els.msgs.appendChild(el);
+    showThread();
+    if (els.thread.classList.contains('collapsed')) setCollapsed(false);
+    scrollToEnd(true);
+    return el;
+  }
+  function setNote(note, text, err) {
+    note.textContent = text;
+    note.classList.toggle('err', !!err);
+    note.hidden = !text;
+  }
+  function startThinking(body) {
+    body.innerHTML = '<span class="think"><span class="scr" aria-hidden="true"></span><span>Thinking</span></span>';
+    const scr = body.querySelector('.scr');
+    const tick = () => {
+      let s = '';
+      for (let i = 0; i < 6; i++) s += CODECHARS[(Math.random() * CODECHARS.length) | 0];
+      scr.textContent = s;
+    };
+    tick();
+    if (!reduceMQ.matches) thinkTimer = setInterval(tick, 90);
+  }
+  function stopThinking() { clearInterval(thinkTimer); thinkTimer = null; }
+
+  function dockTop() {
+    const b = (els.thread.hidden ? els.form : els.thread).getBoundingClientRect();
+    return b;
+  }
+  const pulsePoint = () => { const b = dockTop(); return [b.left + b.width / 2, b.top]; };
+
+  function rules(withTools) {
+    const lines = [
+      'You are Claude, chatting with a visitor through a small text box on a web page.',
+      'The page background is an interactive ASCII ripple field: a grid of tiny monospace characters that stays dark until the visitor touches it. Moving the pointer leaves a faint trail of characters that spreads and fades. Clicking sends a bright ring of scrambling characters outward from that point; the ring slows as it grows, a weaker second ring follows it, and it fades after a couple of seconds. It recreates an animated background from the Claude desktop app’s Code mode, drawn on a canvas from a pre-rendered glyph atlas.',
+      `Current look: ${currentPalette()} color, ${Field.setName === 'code' ? 'letters and digits' : Field.setName === 'binary' ? 'binary 0 and 1' : 'a density ramp of . : + # @'} as glyphs.`,
+      '',
+      'How to reply:',
+      '- Use the visitor’s language. Be warm, direct and brief: usually one to four sentences. Go longer only when the visitor asks for detail or code.',
+      '- Plain text. You may use **bold**, `inline code`, short "- " bullet lists and fenced code blocks. No headings, no tables.',
+    ];
+    if (withTools) {
+      lines.push('- You can act on the background with the page tools: ripple (a ring from a point), write_in_field (spell a short word in glowing characters) and set_color (steel, ember, moss, lilac or mono). Use them when the visitor asks for something visual, and now and then to punctuate a playful moment. After using one, mention it in a few words. Never describe tool names or parameters.');
+    } else {
+      lines.push('- You can’t change the background yourself in this view. If asked, say the visitor can click the field, or use Tweaks at the top right to change color and glyphs.');
+    }
+    return lines.join('\n');
+  }
+
+  function makeTools() {
+    return [
+      {
+        name: 'ripple',
+        description: 'Send a ring of characters across the background field, like a click. x and y are fractions of the screen: 0 is the left or top edge, 1 the right or bottom edge. strength runs from 0.3 (soft) to 1.5 (big); 1 is a normal click. Returns "ok".',
+        inputSchema: {
+          type: 'object',
+          properties: {
+            x: { type: 'number', minimum: 0, maximum: 1 },
+            y: { type: 'number', minimum: 0, maximum: 1 },
+            strength: { type: 'number', minimum: 0.3, maximum: 1.5 },
+          },
+          required: ['x', 'y'],
+        },
+        execute(input) {
+          const x = clamp(Number(input.x), 0, 1), y = clamp(Number(input.y), 0, 1);
+          if (!isFinite(x) || !isFinite(y)) throw new Error('x and y must be numbers between 0 and 1');
+          let s = Number(input.strength);
+          if (!isFinite(s)) s = 1;
+          s = clamp(s, 0.3, 1.5);
+          Field.ripple(x * window.innerWidth, y * window.innerHeight, Math.min(1, s), Math.max(0.45, s));
+          return 'ok';
+        },
+      },
+      {
+        name: 'write_in_field',
+        description: 'Spell a short word or phrase (up to 14 characters) in large letters made of glowing, scrambling characters across the background. It sweeps in from the left and fades after about six seconds. Returns what was written.',
+        inputSchema: {
+          type: 'object',
+          properties: { text: { type: 'string', maxLength: 14 } },
+          required: ['text'],
+        },
+        async execute(input) {
+          const t = String(input.text == null ? '' : input.text).trim();
+          if (!t) throw new Error('text is empty');
+          const w = await Field.etch(t);
+          return w.length < t.length ? `wrote "${w}" (cut to 14 characters)` : `wrote "${w}"`;
+        },
+      },
+      {
+        name: 'set_color',
+        description: 'Switch the color of the background characters. One of: steel (blue, the default), ember (orange), moss (green), lilac (violet), mono (gray). Returns the color now in use.',
+        inputSchema: {
+          type: 'object',
+          properties: { name: { type: 'string', enum: PALETTES } },
+          required: ['name'],
+        },
+        execute(input) {
+          const name = String(input.name || '').toLowerCase().trim();
+          if (!PALETTES.includes(name)) throw new Error('Unknown color. Use one of: ' + PALETTES.join(', '));
+          setPalette(name);
+          Field.ripple(window.innerWidth / 2, window.innerHeight * 0.38, 0.8, 1);
+          return name;
+        },
+      },
+    ];
+  }
+
+  function updateSend() {
+    const empty = !els.input.value.trim();
+    els.send.disabled = busy ? false : (empty || !!fatal);
+    els.send.classList.toggle('busy', busy);
+    els.send.setAttribute('aria-label', busy ? 'Stop' : 'Send');
+  }
+  function setBusy(b) {
+    busy = b;
+    updateSend();
+    if (!fatal) setStatus(b ? 'Esc to stop' : HINT);
+  }
+  function autoGrow() {
+    els.input.style.height = 'auto';
+    els.input.style.height = Math.min(els.input.scrollHeight, 168) + 'px';
+  }
+
+  async function send(raw) {
+    const text = String(raw || '').trim();
+    if (!text || busy) return;
+    if (fatal) return;
+    busy = true;
+    setBusy(true);
+    els.input.value = '';
+    autoGrow();
+    updateSend();
+    addMessage('user', text);
+    turns.push({ role: 'user', content: text });
+    const bubble = addMessage('assistant');
+    const body = bubble.querySelector('.body');
+    const note = bubble.querySelector('.note');
+    startThinking(body);
+    Field.rippleAtEl(els.send, 1, 0.9);
+    Field.setPulse(pulsePoint);
+
+    let streamed = false, lastPulse = 0;
+    try {
+      const s = await samplePromise;
+      if (!s) {
+        body.textContent = '';
+        setNote(note, fatal === 'outside' ? 'Open this page in Claude to chat.' : 'Chat with Claude isn’t available in this view.', true);
+        turns.pop();
+        return;
+      }
+      let useTools = toolsOK;
+      let res;
+      for (let attempt = 0; attempt < 2; attempt++) {
+        ctl = new AbortController();
+        const opts = {
+          cache: false,
+          signal: ctl.signal,
+          modelTier: tier === 'deep' ? 'default' : 'quick',
+          onText: ({ text: full, delta }) => {
+            if (!streamed) { streamed = true; stopThinking(); Field.setPulse(null); }
+            body.innerHTML = renderMarkdown(closeOpen(full));
+            scrollToEnd();
+            const t = performance.now();
+            if (t - lastPulse > 260) {
+              lastPulse = t;
+              const b = dockTop();
+              Field.streamPulse(b.left + 24, b.right - 24, b.top, delta.length);
+            }
+          },
+        };
+        if (useTools) opts.tools = makeTools();
+        try {
+          res = await s([{ role: 'user', content: rules(useTools) }, ...turns.slice(-24)], opts);
+          break;
+        } catch (e) {
+          // one fallback: this view can't run page tools, so ask again without them
+          if (e && e.code === 'tools_unavailable' && useTools && attempt === 0) { toolsOK = false; useTools = false; continue; }
+          throw e;
+        }
+      }
+      stopThinking();
+      body.innerHTML = renderMarkdown(res.text);
+      turns.push({ role: 'assistant', content: res.text });
+      if (res.truncated) setNote(note, 'Cut short. Ask for less at a time.');
+      const b = dockTop();
+      Field.ripple(b.left + b.width / 2, b.top, 0.75, 0.8);
+    } catch (e) {
+      stopThinking();
+      const code = (e && e.code) || 'upstream_error';
+      const partial = e && typeof e.text === 'string' ? e.text : '';
+      body.innerHTML = code !== 'refused' && partial ? renderMarkdown(partial) : '';
+      if (code === 'cancelled') {
+        setNote(note, partial ? 'Stopped.' : 'Stopped before Claude replied.');
+      } else {
+        setNote(note, ERR[code] || ERR.upstream_error, true);
+        if (FATAL.has(code)) setFatal(code);
+      }
+      if (partial && code !== 'refused') turns.push({ role: 'assistant', content: partial });
+    } finally {
+      stopThinking();
+      Field.setPulse(null);
+      ctl = null;
+      setBusy(false);
+      scrollToEnd();
+    }
+  }
+
+  function setCollapsed(c) {
+    els.thread.classList.toggle('collapsed', c);
+    els.collapse.textContent = c ? 'Show' : 'Hide';
+    els.collapse.setAttribute('aria-expanded', String(!c));
+  }
+
+  els.form.addEventListener('submit', e => {
+    e.preventDefault();
+    if (busy) { if (ctl) ctl.abort(); return; }
+    send(els.input.value);
+  });
+  els.input.addEventListener('input', () => { autoGrow(); updateSend(); });
+  els.input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) {
+      e.preventDefault();
+      if (!busy) send(els.input.value);
+    } else if (e.key === 'Escape' && busy && ctl) {
+      ctl.abort();
+    }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && busy && ctl) ctl.abort(); });
+  els.clear.addEventListener('click', () => {
+    if (busy && ctl) ctl.abort();
+    turns = [];
+    els.msgs.replaceChildren();
+    els.thread.hidden = true;
+    setCollapsed(false);
+    renderChips();
+    els.input.focus();
+  });
+  els.collapse.addEventListener('click', () => setCollapsed(!els.thread.classList.contains('collapsed')));
+  function setTier(t) {
+    tier = t;
+    els.tierBtns.forEach(b => b.setAttribute('aria-checked', String(b.dataset.tier === t)));
+    store.set('arf.tier', t);
+  }
+  els.tierBtns.forEach(b => b.addEventListener('click', () => setTier(b.dataset.tier)));
+  setTier(tier);
+  if (coarseMQ.matches) els.status.textContent = '';
+
+  /* ================================================================
+     Boot
+     ================================================================ */
+  let resizeRaf = 0;
+  window.addEventListener('resize', () => {
+    cancelAnimationFrame(resizeRaf);
+    resizeRaf = requestAnimationFrame(() => Field.resize());
+  });
+  Field.resize();
+  initSample();
+  const fontsReady = document.fonts && document.fonts.load
+    ? Promise.race([document.fonts.load(`400 20px ${MONO}`), new Promise(r => setTimeout(r, 900))]).catch(() => {})
+    : Promise.resolve();
+  fontsReady.then(() => {
+    Field.refreshColors();
+    setTimeout(() => Field.intro(), 120);
+  });
+  if (document.fonts && document.fonts.ready) document.fonts.ready.then(() => Field.refreshColors());
+})();
+</script>
+
+</body></html>

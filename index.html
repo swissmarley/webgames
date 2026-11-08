@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#04080b" />
+  <meta name="description" content="SWISSMARLEY // WEBGAMES OS — Interactive Console Launcher & RetroArch/EmulationStation Collection featuring 11 games built by Claude Opus 5.5 and GPT-6 Astra." />
+  <title>SWISSMARLEY // WEBGAMES OS — Interactive Console Collection</title>
+  <link rel="icon" type="image/png" href="assets/swissmarley-logo.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body data-crt="off">
+  <!-- CRT Scanline & Cabinet Shader Overlay -->
+  <div class="crt-overlay" aria-hidden="true"></div>
+
+  <!-- ========================================================================
+       1. INTERACTIVE SWISSMARLEY GITHUB LOGO BOOT LOADER
+       ======================================================================== -->
+  <section id="boot-screen" aria-label="Swissmarley Interactive Console Boot Loader">
+    <canvas id="loader-canvas"></canvas>
+
+    <div class="boot-top-bar">
+      <div class="boot-chip">
+        <span class="pulse-dot"></span>
+        <span>SWISSMARLEY // ARCADE BIOS v4.8</span>
+      </div>
+      <div>CORES: CLAUDE OPUS 5.5 + GPT-6 ASTRA // 11 ROMS</div>
+    </div>
+
+    <div class="boot-centerpiece">
+      <!-- Interactive 3D Tilt & Overclock Swissmarley Emblem -->
+      <div class="emblem-stage" id="emblem-stage" title="Click or hold to Overclock & Pulse the Swissmarley Core">
+        <svg class="emblem-ring-svg" viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <linearGradient id="smGradGold" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffd86b" />
+              <stop offset="50%" stop-color="#39e75f" />
+              <stop offset="100%" stop-color="#d49b35" />
+            </linearGradient>
+          </defs>
+          <g class="ring-rotate-cw">
+            <circle cx="160" cy="160" r="148" fill="none" stroke="url(#smGradGold)" stroke-width="1.5" stroke-dasharray="18 10 4 10" opacity="0.75" />
+            <circle cx="160" cy="12" r="4" fill="#ffd86b" />
+            <circle cx="160" cy="308" r="4" fill="#39e75f" />
+            <circle cx="12" cy="160" r="4" fill="#39e75f" />
+            <circle cx="308" cy="160" r="4" fill="#ffd86b" />
+          </g>
+          <g class="ring-rotate-ccw">
+            <circle cx="160" cy="160" r="132" fill="none" stroke="#39e75f" stroke-width="1.2" stroke-dasharray="42 24" opacity="0.55" />
+            <path d="M 160 22 L 165 30 L 155 30 Z" fill="#ffd86b" />
+            <path d="M 160 298 L 165 290 L 155 290 Z" fill="#39e75f" />
+          </g>
+        </svg>
+
+        <div class="emblem-core-wrap" id="emblem-core-wrap">
+          <img class="emblem-logo-img" src="assets/swissmarley-logo.png" alt="Swissmarley GitHub Emblem" />
+          <div class="emblem-glare"></div>
+        </div>
+      </div>
+
+      <div class="boot-title-group">
+        <div class="boot-eyebrow">GITHUB.COM/SWISSMARLEY ENTERTAINMENT SYSTEM</div>
+        <h1 class="boot-title">SWISSMARLEY WEBGAMES OS</h1>
+        <p class="boot-subtitle">Move cursor to bend circuit field · Click logo or hold <kbd style="color:var(--sm-gold)">SPACE</kbd> to Overclock Core</p>
+      </div>
+
+      <div class="boot-Diagnostics">
+        <div class="bios-log" id="bios-log"></div>
+        <div class="boot-progress-track">
+          <div class="boot-progress-fill" id="boot-progress-fill"></div>
+        </div>
+        <div class="boot-progress-meta">
+          <span id="boot-progress-status">INITIALIZING SWISSMARLEY KERNEL…</span>
+          <span id="boot-progress-pct">0%</span>
+        </div>
+      </div>
+
+      <div class="boot-actions">
+        <button class="btn-boot-primary" id="btn-boot-now">
+          <span>▶ ENTER CONSOLE DECK</span>
+          <span style="font-family:var(--font-mono); font-size:11px; opacity:0.85;">[ENTER]</span>
+        </button>
+        <button class="btn-boot-secondary" id="btn-pause-boot">
+          ⏸ HOLD / EXPLORE LOADER ANIMATION
+        </button>
+      </div>
+    </div>
+
+    <div class="boot-top-bar" style="opacity: 0.72;">
+      <div>EMULATIONSTATION + RETROARCH XMB ARCHITECTURE</div>
+      <div>WEBGL2 · THREE.JS · WEBAUDIO SYNTH</div>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       2. MAIN CONSOLE APPLICATION SHELL
+       ======================================================================== -->
+  <div id="console-app">
+    <!-- Dynamic Ambient Backdrop -->
+    <div class="ambient-backdrop" aria-hidden="true">
+      <img class="ambient-hero-img" id="ambient-hero-img" src="assets/previews/brick-racers.png" alt="" />
+      <div class="ambient-gradient-scrim"></div>
+    </div>
+    <canvas id="bg-canvas" aria-hidden="true"></canvas>
+
+    <!-- TOP CONSOLE SYSTEM BAR -->
+    <header class="console-header">
+      <div class="brand-cluster">
+        <button class="brand-avatar-btn" id="brand-avatar-btn" title="Replay Swissmarley Boot Animation">
+          <img src="assets/swissmarley-logo.png" alt="Swissmarley Logo" />
+        </button>
+        <div class="brand-text-wrap">
+          <div class="brand-name">
+            <span>SWISSMARLEY</span>
+            <span class="accent-badge">WEBGAMES OS</span>
+          </div>
+          <div class="brand-sub">
+            <a href="https://github.com/swissmarley" target="_blank" rel="noopener">@swissmarley ↗</a>
+            <span>·</span>
+            <button id="btn-replay-boot" style="color:var(--sm-gold); font-family:var(--font-mono); font-size:10.5px;">↻ REPLAY INTRO</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- System Cores Ribbon (RetroArch / EmulationStation System Selector) -->
+      <nav class="system-tabs" aria-label="Console System Cores">
+        <span class="shoulder-hint" title="Press Q or L1">Q</span>
+        <button class="sys-tab active" data-core="all">
+          <span>ALL</span>
+          <span class="tab-count">11</span>
+        </button>
+        <button class="sys-tab" data-core="astra">
+          <span>GPT-6 ASTRA</span>
+          <span class="tab-count">8</span>
+        </button>
+        <button class="sys-tab" data-core="opus">
+          <span>OPUS 5.5</span>
+          <span class="tab-count">3</span>
+        </button>
+        <button class="sys-tab" data-core="favorites">
+          <span>★ FAVS</span>
+          <span class="tab-count" id="count-favorites">0</span>
+        </button>
+        <button class="sys-tab" data-core="recent">
+          <span>◷ RECENT</span>
+          <span class="tab-count" id="count-recent">0</span>
+        </button>
+        <span class="shoulder-hint" title="Press E or R1">E</span>
+      </nav>
+
+      <!-- Right Utility Tray -->
+      <div class="header-utilities">
+        <div class="search-box">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+          <input type="text" id="search-input" class="search-input" placeholder="Filter ROMs…" aria-label="Filter games" />
+          <span class="search-shortcut">/</span>
+        </div>
+
+        <div class="view-switcher" role="group" aria-label="Layout View Switcher">
+          <button class="view-btn active" data-view="deck" title="Console Deck Carousel View (V)">DECK</button>
+          <button class="view-btn" data-view="retroarch" title="RetroArch XMB / EmulationStation Split List (V)">RETROARCH</button>
+          <button class="view-btn" data-view="grid" title="Arcade Cabinet Grid Wall (V)">GRID</button>
+        </div>
+
+        <button class="hud-icon-btn" id="btn-crt-toggle" title="Cycle CRT Shader (C)">📺 CRT: OFF</button>
+        <button class="hud-icon-btn active" id="btn-audio-toggle" title="Toggle Console UI Synth (M)">🔊 SFX ON</button>
+        <div class="clock-pill" id="console-clock">00:00:00</div>
+      </div>
+    </header>
+
+    <!-- MAIN INTERACTIVE STAGE -->
+    <main class="console-stage">
+      <!-- Genre Filter & Telemetry Bar -->
+      <div class="genre-strip">
+        <div class="genre-pills" role="tablist" aria-label="Genre Filter">
+          <button class="genre-pill active" data-genre="all">ALL GENRES</button>
+          <button class="genre-pill" data-genre="3D Action & Racing">3D ACTION & RACING</button>
+          <button class="genre-pill" data-genre="Rhythm & Arcade">RHYTHM & ARCADE</button>
+          <button class="genre-pill" data-genre="Simulation & Sandbox">SIMULATION & SANDBOX</button>
+          <button class="genre-pill" data-genre="ASCII & Shader">ASCII & SHADER</button>
+          <button class="genre-pill" data-genre="Tabletop & Cozy">TABLETOP & COZY</button>
+        </div>
+
+        <div class="collection-telemetry">
+          <span class="telemetry-stat">CARTRIDGE <strong id="active-selection-pos">01 / 11</strong></span>
+          <span class="telemetry-stat">VISIBLE <strong id="visible-rom-count">11</strong></span>
+        </div>
+      </div>
+
+      <!-- ====================================================================
+           VIEW A: CONSOLE DECK VIEW (HERO SHOWCASE + CARTRIDGE DOCK)
+           ==================================================================== -->
+      <section id="deck-view" class="view-panel active-view" aria-label="Console Deck Showcase">
+        <div class="hero-showcase">
+          <!-- Left Info Column -->
+          <div class="hero-info-column">
+            <div class="hero-badges" id="hero-badges"></div>
+            <h2 class="hero-title" id="hero-title">Brick Racers</h2>
+            <div class="hero-tagline" id="hero-tagline">Small bricks. Big rivalries.</div>
+            <p class="hero-description" id="hero-description"></p>
+
+            <div class="hero-specs-grid">
+              <div class="spec-card">
+                <div class="spec-label">ENGINE / RENDERER</div>
+                <div class="spec-value" id="spec-renderer">Three.js</div>
+              </div>
+              <div class="spec-card">
+                <div class="spec-label">CARTRIDGE TYPE</div>
+                <div class="spec-value" id="spec-format">Multi-File</div>
+              </div>
+              <div class="spec-card">
+                <div class="spec-label">ROM SIZE</div>
+                <div class="spec-value" id="spec-size">1.8 MB</div>
+              </div>
+              <div class="spec-card">
+                <div class="spec-label">TELEMETRY</div>
+                <div class="spec-value" id="spec-stats">Ready</div>
+              </div>
+            </div>
+
+            <div class="hero-controls-bar" id="hero-controls-bar"></div>
+
+            <div class="hero-cta-row">
+              <button class="btn-launch-main" id="btn-launch-hero">
+                <span>▶ LAUNCH CARTRIDGE</span>
+                <span class="key-badge">ENTER</span>
+              </button>
+              <button class="btn-console-action" id="btn-standalone-hero" title="Open game in a dedicated browser tab">
+                ↗ STANDALONE TAB
+              </button>
+              <button class="btn-console-action" id="btn-fav-hero" title="Toggle Favorite (F)">
+                ☆ FAVORITE [F]
+              </button>
+              <button class="btn-console-action" id="btn-specs-hero" title="Inspect ROM Specs & Controls (I)">
+                ⓘ ROM SPECS [I]
+              </button>
+            </div>
+          </div>
+
+          <!-- Right Preview Monitor Column -->
+          <div class="hero-preview-column">
+            <div class="preview-monitor-frame" id="preview-monitor-frame" title="Click to Launch Cartridge">
+              <div class="monitor-screen">
+                <img class="monitor-screenshot" id="monitor-screenshot" src="assets/previews/brick-racers.png" alt="Game preview" />
+                <div class="monitor-hud-overlay">
+                  <div class="monitor-top-row">
+                    <span class="cartridge-id-tag" id="monitor-rom-code">ASTRA-001 // ASTRA</span>
+                    <span class="live-signal-badge"><i></i> CARTRIDGE VERIFIED</span>
+                  </div>
+                  <div class="monitor-bottom-row">
+                    <div class="shot-dots" id="shot-dots"></div>
+                    <span class="monitor-play-prompt">▶ CLICK TO PLAY</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Bottom Horizontal Cartridge Carousel Dock -->
+        <div class="carousel-dock-wrap">
+          <div class="dock-header">
+            <span>COLLECTION CAROUSEL // USE <kbd style="color:var(--sm-gold)">←</kbd> <kbd style="color:var(--sm-gold)">→</kbd> OR CLICK CARTRIDGE</span>
+            <div class="dock-nav-btns">
+              <button class="dock-arrow" id="dock-prev" aria-label="Previous Game">◀</button>
+              <button class="dock-arrow" id="dock-next" aria-label="Next Game">▶</button>
+            </div>
+          </div>
+          <div class="carousel-track" id="carousel-track"></div>
+        </div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW B: RETROARCH XMB / EMULATIONSTATION SPLIT ROM LIST VIEW
+           ==================================================================== -->
+      <section id="retroarch-view" class="view-panel" aria-label="RetroArch Split ROM View">
+        <div class="ra-rom-list-pane">
+          <div class="ra-pane-header">
+            <div>#</div>
+            <div>CARTRIDGE TITLE</div>
+            <div>SUB-GENRE</div>
+            <div>AI CORE</div>
+            <div style="text-align:right;">SIZE</div>
+          </div>
+          <div class="ra-rom-scroll" id="ra-rom-scroll"></div>
+        </div>
+        <div class="ra-inspector-pane" id="ra-inspector-pane"></div>
+      </section>
+
+      <!-- ====================================================================
+           VIEW C: ARCADE CABINET GRID VIEW
+           ==================================================================== -->
+      <section id="grid-view" class="view-panel" aria-label="Arcade Cabinet Grid Wall">
+        <div class="cabinet-grid" id="cabinet-grid"></div>
+      </section>
+    </main>
+
+    <!-- BOTTOM EMULATIONSTATION / RETROARCH HOTKEY FOOTER -->
+    <footer class="console-footer">
+      <div class="hotkey-group">
+        <span class="hotkey-item"><kbd>← →</kbd> / <kbd>WASD</kbd> Navigate</span>
+        <span class="hotkey-item"><kbd>ENTER</kbd> Launch ROM</span>
+        <span class="hotkey-item"><kbd>Q</kbd> <kbd>E</kbd> Switch Core</span>
+        <span class="hotkey-item"><kbd>F</kbd> Favorite</span>
+        <span class="hotkey-item"><kbd>V</kbd> Cycle View</span>
+        <span class="hotkey-item"><kbd>C</kbd> CRT Shader</span>
+        <span class="hotkey-item"><kbd>I</kbd> ROM Specs</span>
+        <span class="hotkey-item"><kbd>/</kbd> Search</span>
+      </div>
+      <div class="footer-right">
+        <span class="gamepad-pill" id="gamepad-status">⌨ KB + MOUSE + GAMEPAD READY</span>
+        <span>SWISSMARLEY // OPUS 5.5 & ASTRA 6 COLLECTION</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- ========================================================================
+       3. IN-CONSOLE GAME RUNNER (RETROARCH QUICK MENU + IFRAME)
+       ======================================================================== -->
+  <section id="game-runner" aria-label="Active Game Runner">
+    <button class="runner-Floating-tab" id="runner-expand-pill" title="Show Console Overlay Bar">
+      <span>▼ SWISSMARLEY CONSOLE MENU</span>
+      <span style="opacity:0.75;">[F1]</span>
+    </button>
+
+    <div class="runner-topbar">
+      <div class="runner-left">
+        <button class="btn-eject" id="btn-runner-eject" title="Eject Cartridge & Return to Launcher (F1)">
+          ◀ EJECT TO LAUNCHER [F1]
+        </button>
+        <span class="core-pill core-astra" id="runner-core-badge">GPT-6 Astra</span>
+        <span class="runner-game-title" id="runner-game-title">Game Title</span>
+      </div>
+
+      <div class="runner-right">
+        <span style="font-family:var(--font-mono); font-size:11.5px; color:var(--sm-emerald);">
+          SESSION <strong id="runner-timer">00:00</strong>
+        </span>
+        <button class="runner-btn" id="btn-runner-restart">↻ RESTART ROM</button>
+        <button class="runner-btn" id="btn-runner-crt">📺 CRT SHADER</button>
+        <button class="runner-btn" id="btn-runner-collapse">▲ HIDE BAR</button>
+        <button class="runner-btn" id="btn-runner-fullscreen">⛶ FULLSCREEN</button>
+        <button class="runner-btn" id="btn-runner-newtab">↗ NEW TAB</button>
+      </div>
+    </div>
+
+    <div class="runner-iframe-wrap">
+      <iframe id="game-iframe" src="about:blank" allow="autoplay; fullscreen; gamepad; pointer-lock" title="Game Viewport"></iframe>
+    </div>
+  </section>
+
+  <!-- ========================================================================
+       4. ROM SPECS & CONTROLS MODAL
+       ======================================================================== -->
+  <div class="modal-backdrop" id="specs-modal" role="dialog" aria-modal="true" aria-label="Cartridge Technical Specifications">
+    <div class="modal-card" id="specs-modal-body"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

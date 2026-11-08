@@ -1,0 +1,170 @@
+{
+ "results": [
+  {
+   "name": "language auto-detect en-US \u2192 en",
+   "ok": true,
+   "detail": "lang=en"
+  },
+  {
+   "name": "language auto-detect zh-CN \u2192 zh-CN",
+   "ok": true,
+   "detail": "lang=zh-CN"
+  },
+  {
+   "name": "language auto-detect es-MX \u2192 es",
+   "ok": true,
+   "detail": "lang=es"
+  },
+  {
+   "name": "language auto-detect fr-FR \u2192 en",
+   "ok": true,
+   "detail": "lang=en"
+  },
+  {
+   "name": "manual language choice persists across reload",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "landscape layout at 1280\u00d7720",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "real keyboard catch (hold Space to aim, release to drop)",
+   "ok": true,
+   "detail": "{\"haul\": 15, \"launches\": 1, \"hits\": 1}"
+  },
+  {
+   "name": "extra launch inputs ignored while the claw travels",
+   "ok": true,
+   "detail": "launches=2"
+  },
+  {
+   "name": "dynamite not consumed with an empty claw",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "pause (P) freezes clock, moving items and claw",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "Escape resumes from the pause dialog",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "hidden page pauses automatically",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "Tripo slot GLBs loaded and active by default",
+   "ok": true,
+   "detail": "ready"
+  },
+  {
+   "name": "30 model switches: no geometry/texture/program growth",
+   "ok": true,
+   "detail": "geo 101\u2192101 tex 16\u219216 prog 14\u219214"
+  },
+  {
+   "name": "model switch keeps level/score/dynamite/items",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "upgrade applied and next level started",
+   "ok": true,
+   "detail": "winch 1\u21921.13, level 2"
+  },
+  {
+   "name": "clearing unlocks the next level (persisted)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "retry: same level, haul reset, dynamite restored, upgrades kept",
+   "ok": true,
+   "detail": "{\"h\": 0, \"d\": 3, \"L\": 1, \"w\": 1.13}"
+  },
+  {
+   "name": "map shows 24 levels with locked future levels",
+   "ok": true,
+   "detail": "24 levels, 22 locked"
+  },
+  {
+   "name": "modal focus containment (Tab stays inside)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "after level 24: endless continues with upgrades retained",
+   "ok": true,
+   "detail": "{\"kind\": \"endless\", \"w\": 1.13, \"t\": 2300, \"time\": 70}"
+  },
+  {
+   "name": "daily board identical across starts; $1,900 / 75 s",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "debug overlay (F3) shows FPS / draw calls / triangles",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "portrait layout at 390\u00d7844 (emulated)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "touch hold aims, survives leaving the contact point, release launches (emulated)",
+   "ok": true,
+   "detail": "{\"s\": \"extend\", \"n\": 1}"
+  },
+  {
+   "name": "cancelled touch cancels aiming without launching (emulated)",
+   "ok": true,
+   "detail": "{\"n\": 1, \"a\": false}"
+  },
+  {
+   "name": "touch hold/release catch (emulated)",
+   "ok": true,
+   "detail": "hit=smallGold"
+  },
+  {
+   "name": "primary touch controls \u2265 44 px",
+   "ok": true,
+   "detail": "[[\"m-tripo\", 70, 44], [\"m-three\", 85, 44], [\"btn-sound\", 44, 44], [\"btn-pause\", 44, 44], [\"btn-dyn\", 116, 52], [\"btn-drop\", 136, 52]]"
+  },
+  {
+   "name": "no horizontal overflow (portrait)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "rotation during cargo return: deferred until the claw returns, cargo kept (emulated)",
+   "ok": true,
+   "detail": "held rock; mid {\"lay\": \"portrait\", \"held\": 5, \"st\": \"return\"}; end {\"lay\": \"landscape\", \"haul\": 224}"
+  },
+  {
+   "name": "corrupt save recovers to defaults with a notice",
+   "ok": true,
+   "detail": "recovered"
+  },
+  {
+   "name": "unavailable storage: game still playable, session-only notice",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "name": "GLB load failure: error stated honestly, Three.js mode playable",
+   "ok": true,
+   "detail": "{\"st\": \"failed\", \"mode\": \"classic\", \"err\": \"miner.glb: Failed to fetch\"}"
+  }
+ ],
+ "console_errors": []
+}

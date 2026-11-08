@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="theme-color" content="#0d150c" />
+  <meta name="description" content="Golden Miner — a one-button 3D mining adventure. Time the swing, pick the prize, beat the clock." />
+  <title>Golden Miner</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpath d='M32 6 52 22 46 50H18L12 22Z' fill='%23f5c24c' stroke='%237a4d12' stroke-width='4'/%3E%3C/svg%3E" />
+  <script type="module" crossorigin src="./assets/index-C9gEW9p7.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-Ca7ZxCsO.css">
+</head>
+<body>
+  <div id="app">
+    <canvas id="scene" aria-hidden="true"></canvas>
+
+    <div id="ui">
+      <header id="topbar">
+        <div class="model-switch" role="group" id="model-switch" aria-labelledby="model-label">
+          <span id="model-label" class="sr-only">Models</span>
+          <button type="button" id="m-tripo" class="seg" aria-pressed="false">Tripo</button>
+          <button type="button" id="m-three" class="seg" aria-pressed="true">Three.js</button>
+          <span id="model-badge" class="badge" hidden>stand-in</span>
+        </div>
+        <div class="top-actions">
+          <button type="button" id="btn-sound" class="icon-btn" aria-label="Sound"></button>
+          <button type="button" id="btn-pause" class="icon-btn" aria-label="Pause" hidden></button>
+        </div>
+      </header>
+
+      <section id="hud" hidden aria-label="Level status">
+        <div class="hud-chip" id="hud-level"></div>
+        <div class="hud-haul">
+          <div class="haul-line"><b id="hud-haul">$0</b><span id="hud-target">/ $650</span><em id="hud-mult" class="mult" hidden>×1.2</em></div>
+          <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="hud-bar"><i id="hud-bar-fill"></i><span id="hud-bar-goal"></span></div>
+          <div class="fever" id="hud-fever" aria-label="Gold Fever"><i></i><i></i><i></i><i></i><span class="fever-bar"><b id="hud-fever-fill"></b></span></div>
+        </div>
+        <div class="hud-time" id="hud-time" role="timer">1:00</div>
+      </section>
+
+      <div id="toasts" aria-live="polite" aria-atomic="false"></div>
+      <div id="floaters" aria-hidden="true"></div>
+
+      <section id="controls" hidden>
+        <button type="button" id="btn-dyn" class="ctl ctl-dyn">
+          <span class="dyn-icon" aria-hidden="true"></span>
+          <span class="ctl-text"><b id="dyn-count">3</b><small id="dyn-label">Dynamite</small></span>
+          <kbd id="dyn-key">B / ↑</kbd>
+        </button>
+        <button type="button" id="btn-drop" class="ctl ctl-drop">
+          <span class="drop-icon" aria-hidden="true"></span>
+          <span class="ctl-text"><b id="drop-label">Drop</b></span>
+          <kbd id="drop-key">Space / ↓</kbd>
+        </button>
+      </section>
+
+      <div id="title-card" class="card invite" hidden></div>
+      <div id="modal-root"></div>
+
+      <div id="loading" role="status" aria-live="polite">
+        <div class="load-card">
+          <div class="logo-mark" aria-hidden="true"></div>
+          <h1 class="load-title">Golden Miner</h1>
+          <div class="load-bar"><i id="load-fill"></i></div>
+          <p id="load-text">Loading…</p>
+        </div>
+      </div>
+
+      <pre id="debug" hidden></pre>
+      <div id="fatal" hidden role="alert"></div>
+    </div>
+  </div>
+</body>
+</html>
